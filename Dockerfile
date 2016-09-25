@@ -32,7 +32,7 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
 RUN DEBIAN_FRONTENT=noninteractive && apt-get install -y openjdk-7-jre
 
 # Build time variables
-ENV LSMB_VERSION master
+ENV LSMB_VERSION 1.5
 ARG CACHEBUST
 
 # Install LedgerSMB
