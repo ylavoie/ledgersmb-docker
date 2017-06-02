@@ -1,5 +1,7 @@
-FROM        perl:5
+FROM        debian:jessie
 MAINTAINER  Freelock john@freelock.com
+
+RUN echo -n "APT::Install-Recommends \"0\";\nAPT::Install-Suggests \"0\";\n" >> /etc/apt/apt.conf
 
 # Install Perl, Tex, Starman, psql client, and all dependencies
 RUN DEBIAN_FRONTENT=noninteractive && \
@@ -22,14 +24,10 @@ RUN DEBIAN_FRONTENT=noninteractive && \
   libopenoffice-oodoc-perl \
   postgresql-client \
   ssmtp \
-  git
-
-# Nodejs for doing Dojo build
-RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
-    apt-get install -y nodejs
+  git cpanminus make gcc libperl-dev lsb-release
 
 # Java is required for closure compiler in Dojo build
-RUN DEBIAN_FRONTENT=noninteractive && apt-get install -y openjdk-7-jre
+RUN DEBIAN_FRONTENT=noninteractive apt-get install -y openjdk-7-jre-headless
 
 # Build time variables
 ENV LSMB_VERSION 1.5
