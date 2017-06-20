@@ -104,15 +104,21 @@ RUN chown www-data /srv/ledgersmb
 USER www-data
 
 RUN cpanm --local-lib=/var/www/perl5 local::lib && eval $(perl -I /var/www/perl5/lib/perl5/ -Mlocal::lib)
+RUN echo $(perl -I /var/www/perl5/lib/perl5/ -Mlocal::lib) >~/.bashrc
 
 ENV HOME /var/www
 ENV PHANTOMJS phantomjs-2.1.1-linux-x86_64
 ENV PATH /var/www/phantomjs-2.1.1-linux-x86_64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 RUN sudo apt-get install -y mc wget
-RUN mkdir -p $HOME/phantomjs
-RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O $HOME/$PHANTOMJS.tar.bz2
-RUN tar -xvf $HOME/$PHANTOMJS.tar.bz2 -C $HOME
-RUN rm $HOME/$PHANTOMJS.tar.bz2
+
+RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O $HOME/$PHANTOMJS.tar.bz2 && \
+    tar -xvf $HOME/$PHANTOMJS.tar.bz2 --exclude=*.js -C $HOME && \
+    rm $HOME/$PHANTOMJS.tar.bz2
+
+RUN phantomjs --webdriver=4422 2>/dev/null >/dev/null &
+
+# Fix Module::Runtime
+RUN cpanm Moose MooseX::NonMoose
 
 CMD ["start.sh"]
