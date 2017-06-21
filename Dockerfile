@@ -4,9 +4,11 @@ MAINTAINER  Freelock john@freelock.com
 RUN echo -n "APT::Install-Recommends \"0\";\nAPT::Install-Suggests \"0\";\n" >> /etc/apt/apt.conf
 
 RUN apt-get update && \
-    apt-get -y install software-properties-common && \
+    apt-get -y install software-properties-common wget && \
     add-apt-repository ppa:ledgersmb/main
 
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
+    wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -    
 
 # Install Perl, Tex, Starman, psql client, and all dependencies
 RUN DEBIAN_FRONTENT=noninteractive && \
@@ -27,7 +29,7 @@ RUN DEBIAN_FRONTENT=noninteractive && \
   texlive-xetex \
   starman \
   libopenoffice-oodoc-perl \
-  postgresql-client \
+  postgresql-client-9.6 \
   ssmtp \
   git cpanminus make gcc libperl-dev lsb-release
 
@@ -36,9 +38,9 @@ RUN DEBIAN_FRONTENT=noninteractive && \
 # Java & Nodejs for doing Dojo build
 #RUN DEBIAN_FRONTENT=noninteractive && apt-get install -y openjdk-7-jre-headless
 RUN DEBIAN_FRONTENT=noninteractive && \
-  apt-get -y install postgresql-server-dev-all liblocal-lib-perl pgtap
+  apt-get -y install postgresql-server-dev-9.6 liblocal-lib-perl patch
 
-RUN apt-get install -y npm
+RUN apt-get install -y npm pgtap
 RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
 
 # Build time variables
@@ -110,7 +112,7 @@ ENV HOME /var/www
 ENV PHANTOMJS phantomjs-2.1.1-linux-x86_64
 ENV PATH /var/www/phantomjs-2.1.1-linux-x86_64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-RUN sudo apt-get install -y mc wget
+RUN sudo apt-get install -y mc
 
 RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O $HOME/$PHANTOMJS.tar.bz2 && \
     tar -xvf $HOME/$PHANTOMJS.tar.bz2 --exclude=*.js -C $HOME && \
