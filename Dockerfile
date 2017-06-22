@@ -96,7 +96,7 @@ RUN mkdir -p /tmp && \
   chmod 1777 /tmp
 
 # Internal Port Expose
-EXPOSE 5762
+EXPOSE 5000
 
 # Add sudo capability
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
