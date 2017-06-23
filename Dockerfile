@@ -3,10 +3,12 @@ MAINTAINER  Freelock john@freelock.com
 
 RUN echo -n "APT::Install-Recommends \"0\";\nAPT::Install-Suggests \"0\";\n" >> /etc/apt/apt.conf
 
+# We need our repository for Trusty libpgobject*
 RUN apt-get update && \
     apt-get -y install software-properties-common wget && \
     add-apt-repository ppa:ledgersmb/main
 
+# Trusty builds for PostgreSQL higher than 9.1
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
     wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -    
 
@@ -38,7 +40,7 @@ RUN DEBIAN_FRONTENT=noninteractive && \
 # Java & Nodejs for doing Dojo build
 #RUN DEBIAN_FRONTENT=noninteractive && apt-get install -y openjdk-7-jre-headless
 RUN DEBIAN_FRONTENT=noninteractive && \
-  apt-get -y install postgresql-server-dev-9.6 liblocal-lib-perl patch
+  apt-get -y install postgresql-server-dev-9.6 liblocal-lib-perl
 
 RUN apt-get install -y npm pgtap
 RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
@@ -98,27 +100,30 @@ RUN mkdir -p /tmp && \
 # Internal Port Expose
 EXPOSE 5000
 
+ENV PHANTOMJS phantomjs-2.1.1-linux-x86_64
+ENV PATH /opt/$PHANTOMJS/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O /opt/$PHANTOMJS.tar.bz2 && \
+    tar -xvf /opt/$PHANTOMJS.tar.bz2 --exclude=*.js -C /opt && \
+    rm /opt/$PHANTOMJS.tar.bz2
+
+RUN phantomjs --webdriver=4422 2>/dev/null >/dev/null &
+
 # Add sudo capability
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
-# If ledgersmb.conf does not exist, www-data user needs to be able to create it.
-RUN chown www-data /srv/ledgersmb
+# Make sure www-data share the uid/gid of the container owner on the host
+#RUN groupmod --gid $HOST_GID www-data
+#RUN usermod --uid $HOST_UID --gid $HOST_GID www-data
+RUN groupmod --gid 1000 www-data
+RUN usermod --uid 1000 --gid 1000 www-data
+
+RUN apt install -y mc
+
 USER www-data
 
 RUN cpanm --local-lib=/var/www/perl5 local::lib && eval $(perl -I /var/www/perl5/lib/perl5/ -Mlocal::lib)
 RUN echo $(perl -I /var/www/perl5/lib/perl5/ -Mlocal::lib) >~/.bashrc
-
-ENV HOME /var/www
-ENV PHANTOMJS phantomjs-2.1.1-linux-x86_64
-ENV PATH /var/www/phantomjs-2.1.1-linux-x86_64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-RUN sudo apt-get install -y mc
-
-RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O $HOME/$PHANTOMJS.tar.bz2 && \
-    tar -xvf $HOME/$PHANTOMJS.tar.bz2 --exclude=*.js -C $HOME && \
-    rm $HOME/$PHANTOMJS.tar.bz2
-
-RUN phantomjs --webdriver=4422 2>/dev/null >/dev/null &
 
 # Fix Module::Runtime
 RUN cpanm Moose MooseX::NonMoose
