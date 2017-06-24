@@ -107,8 +107,6 @@ RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O /opt/$PHANTOMJS
     tar -xvf /opt/$PHANTOMJS.tar.bz2 --exclude=*.js -C /opt && \
     rm /opt/$PHANTOMJS.tar.bz2
 
-RUN phantomjs --webdriver=4422 2>/dev/null >/dev/null &
-
 # Add sudo capability
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
@@ -118,7 +116,8 @@ RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 www-data
 
-RUN apt install -y mc
+RUN DEBIAN_FRONTENT=noninteractive && \
+  apt install -y mc lynx
 
 USER www-data
 
