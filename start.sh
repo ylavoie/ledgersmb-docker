@@ -34,4 +34,4 @@ echo "Selected PERL5LIB=$PERL5LIB";
 # start ledgersmb
 #phantomjs --webdriver=4422 2>/dev/null >/dev/null &
 phantomjs --webdriver=4422 2>/tmp/phantomjs2.log >/tmp/phantomjs1.log &
-exec starman --port 5000 tools/starman.psgi --access-log=/tmp/access.log --error-log=/tmp/error.log
+exec plackup --port 5001 --server HTTP::Server::PSGI tools/starman.psgi --access-log=/tmp/access.log --error-log=/tmp/error.log

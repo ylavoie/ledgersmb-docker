@@ -29,7 +29,7 @@ RUN DEBIAN_FRONTENT=noninteractive && \
   libmoosex-nonmoose-perl \
   texlive-latex-recommended \
   texlive-xetex \
-  starman \
+  curl \
   libopenoffice-oodoc-perl \
   postgresql-client-9.6 \
   ssmtp \
@@ -119,12 +119,9 @@ RUN usermod --uid 1000 --gid 1000 www-data
 RUN DEBIAN_FRONTENT=noninteractive && \
   apt install -y mc lynx
 
-USER www-data
-
-RUN cpanm --local-lib=/var/www/perl5 local::lib && eval $(perl -I /var/www/perl5/lib/perl5/ -Mlocal::lib)
-RUN echo $(perl -I /var/www/perl5/lib/perl5/ -Mlocal::lib) >~/.bashrc
-
 # Fix Module::Runtime
 RUN cpanm Moose MooseX::NonMoose
+
+USER www-data
 
 CMD ["start.sh"]
