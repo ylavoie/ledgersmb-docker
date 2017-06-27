@@ -31,7 +31,7 @@ RUN DEBIAN_FRONTENT=noninteractive && \
   texlive-xetex \
   curl \
   libopenoffice-oodoc-perl \
-  postgresql-client-9.6 \
+  postgresql-client-9.3 \
   ssmtp \
   git cpanminus make gcc libperl-dev lsb-release
 
@@ -40,9 +40,9 @@ RUN DEBIAN_FRONTENT=noninteractive && \
 # Java & Nodejs for doing Dojo build
 #RUN DEBIAN_FRONTENT=noninteractive && apt-get install -y openjdk-7-jre-headless
 RUN DEBIAN_FRONTENT=noninteractive && \
-  apt-get -y install postgresql-server-dev-9.6 liblocal-lib-perl
+  apt-get -y install postgresql-server-dev-9.3 liblocal-lib-perl
 
-RUN apt-get install -y npm pgtap
+RUN apt-get install -y npm libtap-parser-sourcehandler-pgtap-perl pgtap postgresql-9.3-pgtap
 RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
 
 # Build time variables
@@ -121,6 +121,9 @@ RUN DEBIAN_FRONTENT=noninteractive && \
 
 # Fix Module::Runtime
 RUN cpanm Moose MooseX::NonMoose
+
+# Add temporary patches
+COPY patch/DBAdmin.pm /usr/local/share/perl/5.18.2/PGObject/Util/DBAdmin.pm
 
 USER www-data
 
