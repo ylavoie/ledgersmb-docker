@@ -98,7 +98,7 @@ RUN mkdir -p /tmp && \
   chmod 1777 /tmp
 
 # Internal Port Expose
-EXPOSE 5000
+EXPOSE 5001
 
 ENV PHANTOMJS phantomjs-2.1.1-linux-x86_64
 ENV PATH /opt/$PHANTOMJS/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
