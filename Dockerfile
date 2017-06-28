@@ -61,6 +61,9 @@ RUN cpanm --quiet --notest \
   --with-feature=starman \
   --with-feature=latex-pdf-ps \
   --with-feature=openoffice \
+  --with-feature=edi \
+  --with-feature=latex-pdf-images \
+  --with-feature=xls \
   --installdeps .
 
 # Uglify needs to be installed right before 'make dojo'?!
@@ -85,13 +88,6 @@ ENV SSMTP_FROMLINE_OVERRIDE YES
 ENV POSTGRES_HOST postgres
 ENV POSTGRES_PORT 5432
 ENV DEFAULT_DB lsmb
-
-COPY start.sh /usr/local/bin/start.sh
-COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
-
-RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
-  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh && \
-  mkdir -p /var/www && chown www-data /var/www
 
 # Work around an aufs bug related to directory permissions:
 RUN mkdir -p /tmp && \
@@ -120,10 +116,18 @@ RUN DEBIAN_FRONTENT=noninteractive && \
   apt install -y mc lynx
 
 # Fix Module::Runtime
-RUN cpanm Moose MooseX::NonMoose
+RUN cpanm Moose MooseX::NonMoose Data::Printer
 
 # Add temporary patches
 COPY patch/DBAdmin.pm /usr/local/share/perl/5.18.2/PGObject/Util/DBAdmin.pm
+ENV LANG=C.UTF-8
+
+COPY start.sh /usr/local/bin/start.sh
+COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
+
+RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
+  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh && \
+  mkdir -p /var/www && chown www-data /var/www
 
 USER www-data
 
