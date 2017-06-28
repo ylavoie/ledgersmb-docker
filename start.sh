@@ -31,7 +31,13 @@ for PerlLib in /usr/lib/perl5* /usr/local/lib/perl5*/site_perl/* ; do
 done ;
 echo "Selected PERL5LIB=$PERL5LIB";
 
+setterm -term linux -back blue
+
 # start ledgersmb
 #phantomjs --webdriver=4422 2>/dev/null >/dev/null &
 phantomjs --webdriver=4422 2>/tmp/phantomjs2.log >/tmp/phantomjs1.log &
-exec plackup --port 5001 --server HTTP::Server::PSGI tools/starman.psgi --access-log=/tmp/access.log --error-log=/tmp/error.log
+exec plackup --port 5001 --server HTTP::Server::PSGI tools/starman.psgi \
+    --access-log=/tmp/access.log \
+    --error-log=/tmp/error.log \
+    --Reload "lib, old/lib, xt/lib"
+
