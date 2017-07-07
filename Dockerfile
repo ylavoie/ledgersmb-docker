@@ -8,12 +8,8 @@ RUN apt-get update && \
     apt-get -y install software-properties-common wget && \
     add-apt-repository ppa:ledgersmb/main
 
-# Trusty builds for PostgreSQL higher than 9.1
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
-    wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -    
-
 # Install Perl, Tex, Starman, psql client, and all dependencies
-RUN DEBIAN_FRONTENT=noninteractive && \
+RUN DEBIAN_FRONTEND=noninteractive && \
   apt-get update && apt-get -y install \
   libcgi-emulate-psgi-perl libcgi-simple-perl libconfig-inifiles-perl \
   libdbd-pg-perl libdbi-perl libdatetime-perl \
@@ -23,54 +19,60 @@ RUN DEBIAN_FRONTENT=noninteractive && \
   liblog-log4perl-perl libmime-base64-perl libmime-lite-perl \
   libmath-bigint-gmp-perl libmoose-perl libnumber-format-perl \
   libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl \
-  libplack-perl libtemplate-perl \
+  libpgobject-util-dbmethod-perl libplack-perl libtemplate-perl \
   libnamespace-autoclean-perl \
   libtemplate-plugin-latex-perl libtex-encode-perl \
   libmoosex-nonmoose-perl \
   texlive-latex-recommended \
   texlive-xetex \
-  curl \
+  starman \
   libopenoffice-oodoc-perl \
-  postgresql-client-9.3 \
   ssmtp \
-  git cpanminus make gcc libperl-dev lsb-release
+  lsb-release && \
+  rm -rf /var/lib/apt/lists/*
 
-# libpgobject-util-dbmethod-perl? Not available on Trusty
+# Trusty builds for PostgreSQL higher than 9.1
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
+    wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
 
-# Java & Nodejs for doing Dojo build
-#RUN DEBIAN_FRONTENT=noninteractive && apt-get install -y openjdk-7-jre-headless
-RUN DEBIAN_FRONTENT=noninteractive && \
-  apt-get -y install postgresql-server-dev-9.3 liblocal-lib-perl
-
-RUN apt-get install -y npm libtap-parser-sourcehandler-pgtap-perl pgtap postgresql-9.3-pgtap
-RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
+RUN apt-get update && apt-get -y install \
+             libtap-parser-sourcehandler-pgtap-perl pgtap \
+             libpq-dev \
+             postgresql-client-9.3 postgresql-9.3-pgtap && \
+    rm -rf /var/lib/apt/lists/*
 
 # Build time variables
 ENV LSMB_VERSION master
+ENV NODE_PATH /usr/local/lib/node_modules
+ENV DEBIAN_FRONTEND=noninteractive
+
 ARG CACHEBUST
 
-# Install LedgerSMB
-RUN cd /srv && \
-  git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSMB.git ledgersmb
+# Java & Nodejs for doing Dojo build
+# Uglify needs to be installed right before 'make dojo'?!
+RUN apt-get update && apt-get -y install \
+             git make gcc libperl-dev npm curl && \
+  rm -rf /var/lib/apt/lists/* && \
+  update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
+
+WORKDIR /srv
+RUN git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSMB.git ledgersmb
 
 WORKDIR /srv/ledgersmb
 
 # master requirements
-RUN cpanm --quiet --notest \
-  --with-develop \
+RUN curl -L https://cpanmin.us | perl - App::cpanminus && \
+  cpanm --quiet --notest \
   --with-feature=starman \
   --with-feature=latex-pdf-ps \
   --with-feature=openoffice \
-  --with-feature=edi \
   --with-feature=latex-pdf-images \
+  --with-feature=latex-pdf-ps \
   --with-feature=xls \
   --installdeps .
 
 # Uglify needs to be installed right before 'make dojo'?!
 RUN npm install -g uglify-js@">=2.0 <3.0"
-ENV NODE_PATH /usr/local/lib/node_modules
-
-# Build dojo
 RUN make dojo
 
 # Configure outgoing mail to use host, other run time variable defaults
@@ -89,22 +91,8 @@ ENV POSTGRES_HOST postgres
 ENV POSTGRES_PORT 5432
 ENV DEFAULT_DB lsmb
 
-# Work around an aufs bug related to directory permissions:
-RUN mkdir -p /tmp && \
-  chmod 1777 /tmp
-
-# Internal Port Expose
-EXPOSE 5001
-
-ENV PHANTOMJS phantomjs-2.1.1-linux-x86_64
-ENV PATH /opt/$PHANTOMJS/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-RUN wget -q https://efficito.com/phantomjs/$PHANTOMJS.tar.bz2 -O /opt/$PHANTOMJS.tar.bz2 && \
-    tar -xvf /opt/$PHANTOMJS.tar.bz2 --exclude=*.js -C /opt && \
-    rm /opt/$PHANTOMJS.tar.bz2
-
-# Add sudo capability
-RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
+COPY start.sh /usr/local/bin/start.sh
+COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
 
 # Make sure www-data share the uid/gid of the container owner on the host
 #RUN groupmod --gid $HOST_GID www-data
@@ -112,22 +100,36 @@ RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 www-data
 
-RUN DEBIAN_FRONTENT=noninteractive && \
-  apt install -y mc lynx
+RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
+  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh && \
+  mkdir -p /var/www && chown www-data:www-data /var/www
+
+# Work around an aufs bug related to directory permissions:
+RUN mkdir -p /tmp && \
+  chmod 1777 /tmp
+
+# Internal Port Expose
+EXPOSE 5001
+
+# Add sudo capability
+RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
+
+RUN apt-get update && \
+  apt install -y mc inotify-tools && \
+  rm -rf /var/lib/apt/lists/*
 
 # Fix Module::Runtime
 RUN cpanm Moose MooseX::NonMoose Data::Printer
 
 # Add temporary patches
-COPY patch/DBAdmin.pm /usr/local/share/perl/5.18.2/PGObject/Util/DBAdmin.pm
+COPY patch/patches.tar /tmp
+RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
 ENV LANG=C.UTF-8
 
-COPY start.sh /usr/local/bin/start.sh
-COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
+RUN cpanm --quiet --notest Data::Printer Devel::hdb && \
+    rm -r ~/.cpanm
 
-RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
-  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh && \
-  mkdir -p /var/www && chown www-data /var/www
+COPY ledgersmb.rebuild /var/www/ledgersmb.rebuild
 
 USER www-data
 
