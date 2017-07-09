@@ -70,6 +70,7 @@ RUN curl -L https://cpanmin.us | perl - App::cpanminus && \
   --with-feature=latex-pdf-ps \
   --with-feature=edi \
   --with-feature=xls \
+  --with-develop \
   --installdeps .
 
 # Fix Module::Runtime of old distros
@@ -119,7 +120,7 @@ EXPOSE 5001
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
 RUN apt-get update && \
-  apt install -y mc inotify-tools && \
+  apt install -y mc inotify-tools lynx dnsutils tcpdump && \
   rm -rf /var/lib/apt/lists/*
 
 # Add temporary patches
