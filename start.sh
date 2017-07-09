@@ -3,6 +3,8 @@
 update_ssmtp.sh
 cd /srv/ledgersmb
 
+cpanm --installdeps .
+
 if [[ ! -f ledgersmb.conf ]]; then
   cp conf/ledgersmb.conf.default ledgersmb.conf
   sed -i \

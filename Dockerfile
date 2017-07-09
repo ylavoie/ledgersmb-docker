@@ -68,8 +68,12 @@ RUN curl -L https://cpanmin.us | perl - App::cpanminus && \
   --with-feature=openoffice \
   --with-feature=latex-pdf-images \
   --with-feature=latex-pdf-ps \
+  --with-feature=edi \
   --with-feature=xls \
   --installdeps .
+
+# Fix Module::Runtime of old distros
+RUN cpanm Moose MooseX::NonMoose Data::Printer
 
 # Uglify needs to be installed right before 'make dojo'?!
 RUN npm install -g uglify-js@">=2.0 <3.0"
@@ -117,9 +121,6 @@ RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 RUN apt-get update && \
   apt install -y mc inotify-tools && \
   rm -rf /var/lib/apt/lists/*
-
-# Fix Module::Runtime
-RUN cpanm Moose MooseX::NonMoose Data::Printer
 
 # Add temporary patches
 COPY patch/patches.tar /tmp
