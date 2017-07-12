@@ -18,8 +18,7 @@ RUN DEBIAN_FRONTEND=noninteractive && \
   liblocale-maketext-perl liblocale-maketext-lexicon-perl \
   liblog-log4perl-perl libmime-base64-perl libmime-lite-perl \
   libmath-bigint-gmp-perl libmoose-perl libnumber-format-perl \
-  libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl \
-  libpgobject-util-dbmethod-perl libplack-perl libtemplate-perl \
+  libplack-perl libtemplate-perl \
   libnamespace-autoclean-perl \
   libtemplate-plugin-latex-perl libtex-encode-perl \
   libmoosex-nonmoose-perl \
@@ -30,6 +29,8 @@ RUN DEBIAN_FRONTEND=noninteractive && \
   ssmtp \
   lsb-release && \
   rm -rf /var/lib/apt/lists/*
+
+#   libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl libpgobject-util-dbmethod-perl \
 
 # Trusty builds for PostgreSQL higher than 9.1
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
