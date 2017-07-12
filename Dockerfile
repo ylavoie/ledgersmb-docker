@@ -27,20 +27,9 @@ RUN DEBIAN_FRONTEND=noninteractive && \
   starman \
   libopenoffice-oodoc-perl \
   ssmtp \
-  lsb-release && \
-  rm -rf /var/lib/apt/lists/*
+  lsb-release
 
 #   libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl libpgobject-util-dbmethod-perl \
-
-# Trusty builds for PostgreSQL higher than 9.1
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
-    wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
-
-RUN apt-get update && apt-get -y install \
-             libtap-parser-sourcehandler-pgtap-perl pgtap \
-             libpq-dev \
-             postgresql-client-9.3 postgresql-9.3-pgtap && \
-    rm -rf /var/lib/apt/lists/*
 
 # Build time variables
 ENV LSMB_VERSION master
@@ -49,11 +38,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ARG CACHEBUST
 
+# Trusty builds for PostgreSQL higher than 9.1
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list && \
+    wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
+
+RUN apt-get update && apt-get -y install \
+             libtap-parser-sourcehandler-pgtap-perl pgtap \
+             libpq-dev \
+             postgresql-client-9.3 postgresql-9.3-pgtap
+
 # Java & Nodejs for doing Dojo build
 # Uglify needs to be installed right before 'make dojo'?!
 RUN apt-get update && apt-get -y install \
              git make gcc libperl-dev npm curl && \
-  rm -rf /var/lib/apt/lists/* && \
   update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
 
 WORKDIR /srv
@@ -121,7 +118,7 @@ EXPOSE 5001
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
 RUN apt-get update && \
-  apt install -y mc inotify-tools lynx dnsutils tcpdump && \
+  apt install -y mc && \
   rm -rf /var/lib/apt/lists/*
 
 # Add temporary patches
@@ -132,6 +129,8 @@ ENV LANG=C.UTF-8
 RUN cpanm --quiet --notest Data::Printer Devel::hdb && \
     rm -r ~/.cpanm
 
+# Burst the Docker cache based on a flag file,
+# computed from the SHA of the head of git tree (when bind mounted)
 COPY ledgersmb.rebuild /var/www/ledgersmb.rebuild
 
 USER www-data

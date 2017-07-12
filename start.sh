@@ -3,6 +3,8 @@
 update_ssmtp.sh
 cd /srv/ledgersmb
 
+# Revalidate the required CPAN packages in case the
+# source tree is bind mounted and has changed since Docker build.
 cpanm --installdeps .
 
 if [[ ! -f ledgersmb.conf ]]; then
@@ -35,5 +37,4 @@ echo "Selected PERL5LIB=$PERL5LIB";
 
 # start ledgersmb
 exec plackup --port 5001 --server HTTP::Server::PSGI tools/starman.psgi \
-    --access-log=/tmp/access.log \
     --Reload "lib, old/lib, xt/lib"
