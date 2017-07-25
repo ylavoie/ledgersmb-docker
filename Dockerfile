@@ -94,14 +94,14 @@ ENV POSTGRES_HOST postgres
 ENV POSTGRES_PORT 5432
 ENV DEFAULT_DB lsmb
 
-COPY start.sh /usr/local/bin/start.sh
-COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
-
 # Make sure www-data share the uid/gid of the container owner on the host
 #RUN groupmod --gid $HOST_GID www-data
 #RUN usermod --uid $HOST_UID --gid $HOST_GID www-data
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 www-data
+
+COPY start.sh /usr/local/bin/start.sh
+COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
 
 RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
   chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh && \
@@ -134,5 +134,6 @@ RUN cpanm --quiet --notest Data::Printer Devel::hdb && \
 COPY ledgersmb.rebuild /var/www/ledgersmb.rebuild
 
 USER www-data
+COPY mcthemes.tar.xz /var/www/mcthemes.tar.xz
 
 CMD ["start.sh"]

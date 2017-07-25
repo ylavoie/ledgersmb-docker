@@ -1,5 +1,11 @@
 #!/bin/bash
 
+pushd ~
+  mkdir -p .config/mc
+  tar Jxf mcthemes.tar.xz
+  ./mcthemes/mc_change_theme.sh mcthemes/puthre.theme
+popd
+
 update_ssmtp.sh
 cd /srv/ledgersmb
 
@@ -36,5 +42,11 @@ done ;
 echo "Selected PERL5LIB=$PERL5LIB";
 
 # start ledgersmb
-exec plackup --port 5001 --server HTTP::Server::PSGI tools/starman.psgi \
-    --Reload "lib, old/lib, xt/lib"
+if [[ ! -f DEVELOPMENT ]]; then
+  exec plackup --port 5001 --server HTTP::Server::PSGI tools/starman.psgi \
+      --Reload "lib, old/lib, xt/lib, /usr/local/share/perl, /usr/share/perl, /usr/share/perl5"
+else
+  exec plackup --listen localhost:5001 --server HTTP::Server::PSGI tools/starman-development.psgi \
+      --workers 1 --env development \
+      --Reload "lib, old/lib, xt/lib, /usr/local/share/perl, /usr/share/perl, /usr/share/perl5"
+fi
