@@ -53,31 +53,6 @@ RUN apt-get update && apt-get -y install \
              git make gcc libperl-dev npm curl && \
   update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
 
-WORKDIR /srv
-RUN git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSMB.git ledgersmb
-
-WORKDIR /srv/ledgersmb
-
-# master requirements
-RUN curl -L https://cpanmin.us | perl - App::cpanminus && \
-  cpanm --quiet --notest \
-  --with-feature=starman \
-  --with-feature=latex-pdf-ps \
-  --with-feature=openoffice \
-  --with-feature=latex-pdf-images \
-  --with-feature=latex-pdf-ps \
-  --with-feature=edi \
-  --with-feature=xls \
-  --with-develop \
-  --installdeps .
-
-# Fix Module::Runtime of old distros
-RUN cpanm Moose MooseX::NonMoose Data::Printer
-
-# Uglify needs to be installed right before 'make dojo'?!
-RUN npm install -g uglify-js@">=2.0 <3.0"
-RUN make dojo
-
 # Configure outgoing mail to use host, other run time variable defaults
 
 ## sSMTP
@@ -100,6 +75,40 @@ ENV DEFAULT_DB lsmb
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 www-data
 
+WORKDIR /srv
+RUN git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSMB.git ledgersmb
+
+WORKDIR /srv/ledgersmb
+
+# Burst the Docker cache based on a flag file,
+# computed from the SHA of the head of git tree (when bind mounted)
+COPY ledgersmb.rebuild /var/www/ledgersmb.rebuild
+
+# master requirements
+RUN curl -L https://cpanmin.us | perl - App::cpanminus && \
+  cpanm --quiet --notest \
+  --with-feature=starman \
+  --with-feature=latex-pdf-ps \
+  --with-feature=openoffice \
+  --with-feature=latex-pdf-images \
+  --with-feature=latex-pdf-ps \
+  --with-feature=edi \
+  --with-feature=xls \
+  --with-feature=debug \
+  --with-develop \
+  --installdeps .
+
+# Fix Module::Runtime of old distros
+RUN cpanm Moose MooseX::NonMoose Data::Printer \
+	Devel::hdb Plack::Middleware::Debug::Log4perl \
+	Devel::NYTProf \
+	Plack::Middleware::Debug::Profiler::NYTProf \
+	Plack::Middleware::InteractiveDebugger
+
+# Uglify needs to be installed right before 'make dojo'?!
+RUN npm install -g uglify-js@">=2.0 <3.0"
+RUN make dojo
+
 COPY start.sh /usr/local/bin/start.sh
 COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
 
@@ -118,7 +127,7 @@ EXPOSE 5001
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
 RUN apt-get update && \
-  apt install -y mc && \
+  apt install -y mc perlbrew && \
   rm -rf /var/lib/apt/lists/*
 
 # Add temporary patches
@@ -126,14 +135,23 @@ COPY patch/patches.tar /tmp
 RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
 ENV LANG=C.UTF-8
 
-RUN cpanm --quiet --notest Data::Printer Devel::hdb && \
-    rm -r ~/.cpanm
-
-# Burst the Docker cache based on a flag file,
-# computed from the SHA of the head of git tree (when bind mounted)
-COPY ledgersmb.rebuild /var/www/ledgersmb.rebuild
+RUN cpanm --quiet --notest --force \
+	HTTP::AcceptLanguage \
+	Module::Versions \
+	MooseX::Constructor::AllErrors TryCatch \
+    Text::PO::Parser Class::Std::Utils IO::File && \
+	rm -r ~/.cpanm
 
 USER www-data
+WORKDIR /var/www
 COPY mcthemes.tar.xz /var/www/mcthemes.tar.xz
+RUN perlbrew init && \
+    echo "source ~/perl5/perlbrew/etc/bashrc" >~/.bash_profile && \
+    perlbrew install 5.18.4
+RUN perlbrew install-cpanm
+RUN perlbrew exec cpanm PPR Regexp::Debugger Data::Printer
+
+WORKDIR /srv/ledgersmb
 
 CMD ["start.sh"]
+
