@@ -58,18 +58,30 @@ RUN \
     libclass-trigger-perl libclass-accessor-lite-perl libtest-requires-perl \
     libmodule-install-perl nodejs \
     python-pip python-urllib3 python-six npm
-#   libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl 
+#   libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl
 RUN pip install transifex-client || :
 RUN npm install -g uglify-js@">=2.0 <3.0"
 
 # Local development tools
 RUN apt-get update && \
-  apt install -qyy mc gettext sudo bzip2 bash-completion less meld xauth \
+  apt-get install -qyy mc gettext sudo bzip2 bash-completion less meld xauth \
                    lynx dnsutils net-tools xz-utils \
   && DEBIAN_FRONTEND="noninteractive" apt-get -y autoremove \
   && DEBIAN_FRONTEND="noninteractive" apt-get -y autoclean \
   && rm -rf /var/lib/apt/lists/*
 RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
+
+## See also https://github.com/Yelp/dumb-init
+#RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.1/dumb-init_1.2.1_amd64.deb \
+# && dpkg -i dumb-init_*.deb \
+# && rm dumb-init_*.deb
+#ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Add Tini
+ENV TINI_VERSION v0.16.1
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
 
 # Build time variables
 ENV NODE_PATH /usr/local/lib/node_modules
@@ -164,7 +176,7 @@ RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
 # Add sudo capability
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
-# Burst the Docker cache based on a flag file,
+# Bust the Docker cache based on a flag file,
 # computed from the SHA of the head of git tree (when bind mounted)
 COPY --chown=www-data:www-data ledgersmb.rebuild /var/www/ledgersmb.rebuild
 COPY --chown=www-data:www-data git-colordiff.sh /var/www/git-colordiff.sh
@@ -176,6 +188,20 @@ ENV LANG=C.UTF-8
 
 RUN mkdir -p /usr/share/sql-ledger/users
 COPY sql-ledger/users/members /usr/share/sql-ledger/users/members
+
+# install necessary stuff; avahi, and ssh such that we can log in and control avahi
+RUN apt-get update -y \
+  && DEBIAN_FRONTEND=noninteractive apt-get -qq install -y avahi-daemon avahi-utils \
+  && apt-get -qq -y autoclean \
+  && apt-get -qq -y autoremove \
+  && apt-get -qq -y clean
+
+# Avahi
+ADD avahi-daemon.conf /etc/avahi/avahi-daemon.conf
+
+# workaround to get dbus working, required for avahi to talk to dbus. This will be mounted
+RUN mkdir -p /var/run/dbus
+VOLUME /var/run/dbus
 
 USER www-data
 WORKDIR /var/www

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Avahi
+avahi-daemon --no-drop-root &
+
 update_ssmtp.sh
 cd /srv/ledgersmb
 
