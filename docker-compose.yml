@@ -21,22 +21,23 @@ services:
     environment:
       - POSTGRES_PASSWORD=test
 #      - PGDATA=/tmp/docker-postgresql
-#    volumes:
+    volumes:
+      - /tmp:/tmp
 #      # We'll mount the 'pgdata' volume into the location Postgres stores it's data:
 #      - pgdata:/var/lib/postgresql/data
 
   lsmb:
-    image: ylavoie/ledgersmb
+    image: "ylavoie/ledgersmb:${TAG}"
     container_name: lsmb
     networks:
       - default
       - lsmb_internal
     build:
       context: ./ledgersmb-docker
+    env_file:
+      - ledgersmb-docker/variables.env
     #dns_opt: # V2 only ;-(
-    #  - ndots:1
-    environment:
-      - PGHOST=postgres
+    #  - ndots:1 # Patched in start.sh
     volumes:
       - /tmp:/tmp
       - ./ledgersmb-docker:/srv/ledgersmb-docker
