@@ -123,6 +123,7 @@ RUN usermod --uid 1000 --gid 1000 --shell /bin/bash www-data
 WORKDIR /srv/ledgersmb
 
 COPY cpanfile /srv/ledgersmb/cpanfile
+COPY patch/cpanm /usr/bin/cpanm
 # master requirements
 RUN cpanm --quiet --notest \
   --with-feature=starman \
@@ -183,7 +184,7 @@ COPY --chown=www-data:www-data git-colordiff.sh /var/www/git-colordiff.sh
 
 # Add temporary patches
 COPY patch/patches.tar /tmp
-#RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
+RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
 ENV LANG=C.UTF-8
 
 RUN mkdir -p /usr/share/sql-ledger/users
@@ -191,10 +192,66 @@ COPY sql-ledger/users/members /usr/share/sql-ledger/users/members
 
 # install necessary stuff; avahi, and ssh such that we can log in and control avahi
 RUN apt-get update -y \
-  && DEBIAN_FRONTEND=noninteractive apt-get -qq install -y avahi-daemon avahi-utils \
+  && DEBIAN_FRONTEND=noninteractive \
+     apt-get -qq install -y avahi-daemon avahi-utils libnss-mdns \
+                            tcpdump psmisc phantomjs wget unzip \
+                            chromium-browser chromium-chromedriver \
   && apt-get -qq -y autoclean \
   && apt-get -qq -y autoremove \
   && apt-get -qq -y clean
+
+# Chromedriver
+#RUN wget -q https://chromedriver.storage.googleapis.com/2.35/chromedriver_linux64.zip \
+# && unzip chromedriver_linux64.zip \
+# && sudo chmod +x chromedriver \
+# && sudo mv chromedriver /usr/bin/ \
+# && rm chromedriver_linux64.zip
+
+# Geckodriver
+RUN wget -q https://github.com/mozilla/geckodriver/releases/download/v0.19.1/geckodriver-v0.19.1-linux64.tar.gz \
+ && tar -x geckodriver -zf geckodriver-v0.19.1-linux64.tar.gz -O > /usr/bin/geckodriver \
+ && chmod +x /usr/bin/geckodriver \
+ && rm geckodriver-v0.19.1-linux64.tar.gz
+
+ARG FIREFOX_VERSION=57.0.4
+RUN apt-get update -qqy \
+  && apt-get -qqy --no-install-recommends install firefox \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
+  && wget --no-verbose -O /tmp/firefox.tar.bz2 https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2 \
+  && apt-get -y purge firefox \
+  && rm -rf /opt/firefox \
+  && tar -C /opt -xjf /tmp/firefox.tar.bz2 \
+  && rm /tmp/firefox.tar.bz2 \
+  && mv /opt/firefox /opt/firefox-$FIREFOX_VERSION \
+  && ln -fs /opt/firefox-$FIREFOX_VERSION/firefox /usr/bin/firefox
+
+#===========
+# PhantomJS
+#===========
+ARG PHANTOM_JS=phantomjs-2.1.1-linux-x86_64
+RUN apt-get update -qqy \
+  && apt-get -qqy --no-install-recommends install \
+            build-essential chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev \
+            libfontconfig1 libfontconfig1-dev \
+  && cd /var/www \
+  && wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 \
+  && tar xvjf $PHANTOM_JS.tar.bz2 \
+  && mv $PHANTOM_JS /usr/local/share \
+  && rm /usr/bin/phantomjs \
+  && ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/bin
+
+#============
+# GeckoDriver
+#============
+ARG GECKODRIVER_VERSION=0.19.1
+RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux64.tar.gz \
+  && rm -rf /opt/geckodriver \
+  && tar -C /opt -zxf /tmp/geckodriver.tar.gz \
+  && rm /tmp/geckodriver.tar.gz \
+  && mv /opt/geckodriver /opt/geckodriver-$GECKODRIVER_VERSION \
+  && chmod 755 /opt/geckodriver-$GECKODRIVER_VERSION \
+  && ln -fs /opt/geckodriver-$GECKODRIVER_VERSION /usr/bin/geckodriver
 
 # Avahi
 ADD avahi-daemon.conf /etc/avahi/avahi-daemon.conf
@@ -208,6 +265,7 @@ WORKDIR /var/www
 RUN xauth add ylaho3:0 MIT-MAGIC-COOKIE-1 083b320b62214727060c3468777f3333
 
 COPY --chown=www-data:www-data mcthemes.tar.xz /var/www/mcthemes.tar.xz
+COPY .bashrc /root/.bashrc
 COPY --chown=www-data:www-data .bashrc /var/www/.bashrc
 COPY --chown=www-data:www-data .dataprinter /var/www/.dataprinter
 
@@ -221,3 +279,4 @@ RUN cd /var/www && \
 WORKDIR /srv/ledgersmb
 
 CMD ["start.sh"]
+#!/bin/bash -x

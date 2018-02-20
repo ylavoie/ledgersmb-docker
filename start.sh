@@ -1,7 +1,17 @@
 #!/bin/bash
 
 # Avahi
-avahi-daemon --no-drop-root &
+cat <<EOF > /etc/dbus-1/system.d/avahi.conf
+<!DOCTYPE busconfig PUBLIC
+"-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+    <policy user="root">
+        <allow own="org.freedesktop.Avahi"/>
+    </policy>
+</busconfig>
+EOF
+sudo avahi-daemon --no-drop-root &
 
 update_ssmtp.sh
 cd /srv/ledgersmb
@@ -28,6 +38,8 @@ fi
 sudo chmod 666 /etc/resolv.conf
 echo "options ndots:1" >>/etc/resolv.conf
 sudo chmod 644 /etc/resolv.conf
+
+export QT_QPA_PLATFORM=phantom
 
 if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" != "1" ]]; then
   #SERVER=Starman
