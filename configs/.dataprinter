@@ -1,0 +1,8 @@
+{
+    class => { internals => 1, show_methods => 'none' },
+    filters => {
+        'LedgerSMB::PGDate'   => sub { $_[0]->ymd },
+        'LedgerSMB::PGNumber' => sub { $_[0]->to_output },
+    }
+}
+

@@ -1,17 +1,24 @@
 #!/bin/bash
 
 # Avahi
-cat <<EOF > /etc/dbus-1/system.d/avahi.conf
-<!DOCTYPE busconfig PUBLIC
-"-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
-"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
-<busconfig>
-    <policy user="root">
-        <allow own="org.freedesktop.Avahi"/>
-    </policy>
-</busconfig>
-EOF
-sudo avahi-daemon --no-drop-root &
+# Fallback to *lsmb* if nothing is specified
+if [ -z "${MDNS_HOSTNAME}" ]; then
+    export MDNS_HOSTNAME='lsmb'
+fi
+
+# Setup the hostname on the avahi config
+# (We use the HOSTNAME environment variable for this)
+sed "s/\(host-name=\).*/\1${MDNS_HOSTNAME}/g" \
+    -i /etc/avahi/avahi-daemon.conf
+
+# Required services for mDNS to work on debian
+sudo /etc/init.d/dbus start
+sudo /etc/init.d/avahi-daemon start
+
+# Some logging
+echo
+echo 'lsmb is up and running. You should be able to access'
+echo "it under: http://${MDNS_HOSTNAME}.local"
 
 update_ssmtp.sh
 cd /srv/ledgersmb
@@ -40,6 +47,7 @@ echo "options ndots:1" >>/etc/resolv.conf
 sudo chmod 644 /etc/resolv.conf
 
 export QT_QPA_PLATFORM=phantom
+export PATH=$PATH:/usr/lib/chromium-browser
 
 if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" != "1" ]]; then
   #SERVER=Starman
@@ -54,4 +62,4 @@ fi
 set -x
 # start ledgersmb
 exec plackup --port 5001 --server $SERVER $PSGI $OPT \
-      --Reload "lib, old, t, xt, /usr/local/share/perl, /usr/share/perl, /usr/share/perl5"
+      --Reload "lib, old/lib, xt/lib, t, xt, /usr/local/share/perl, /usr/share/perl, /usr/share/perl5"

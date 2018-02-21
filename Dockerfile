@@ -122,7 +122,7 @@ RUN usermod --uid 1000 --gid 1000 --shell /bin/bash www-data
 
 WORKDIR /srv/ledgersmb
 
-COPY cpanfile /srv/ledgersmb/cpanfile
+COPY configs/cpanfile /srv/ledgersmb/cpanfile
 COPY patch/cpanm /usr/bin/cpanm
 # master requirements
 RUN cpanm --quiet --notest \
@@ -167,12 +167,7 @@ RUN cpanm --quiet --notest --force \
     Test::Pod Test::Pod::Coverage && \
     rm -r ~/.cpanm
 
-COPY start.sh /usr/local/bin/start.sh
-COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
-
-RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
-  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh && \
-  mkdir -p /var/www && chown www-data:www-data /var/www
+RUN mkdir -p /var/www && chown www-data:www-data /var/www
 
 # Add sudo capability
 RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
@@ -180,11 +175,8 @@ RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 # Bust the Docker cache based on a flag file,
 # computed from the SHA of the head of git tree (when bind mounted)
 COPY --chown=www-data:www-data ledgersmb.rebuild /var/www/ledgersmb.rebuild
-COPY --chown=www-data:www-data git-colordiff.sh /var/www/git-colordiff.sh
+COPY --chown=www-data:www-data configs/git-colordiff.sh /var/www/git-colordiff.sh
 
-# Add temporary patches
-COPY patch/patches.tar /tmp
-RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
 ENV LANG=C.UTF-8
 
 RUN mkdir -p /usr/share/sql-ledger/users
@@ -193,7 +185,8 @@ COPY sql-ledger/users/members /usr/share/sql-ledger/users/members
 # install necessary stuff; avahi, and ssh such that we can log in and control avahi
 RUN apt-get update -y \
   && DEBIAN_FRONTEND=noninteractive \
-     apt-get -qq install -y avahi-daemon avahi-utils libnss-mdns \
+     apt-get -qq install -y avahi-daemon avahi-discover avahi-utils libnss-mdns \
+                            iputils-ping dnsutils \
                             tcpdump psmisc phantomjs wget unzip \
                             chromium-browser chromium-chromedriver \
   && apt-get -qq -y autoclean \
@@ -254,20 +247,30 @@ RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geck
   && ln -fs /opt/geckodriver-$GECKODRIVER_VERSION /usr/bin/geckodriver
 
 # Avahi
-ADD avahi-daemon.conf /etc/avahi/avahi-daemon.conf
+ADD configs/avahi.conf /etc/dbus-1/system.d/avahi.conf
 
 # workaround to get dbus working, required for avahi to talk to dbus. This will be mounted
 RUN mkdir -p /var/run/dbus
 VOLUME /var/run/dbus
 
+COPY start.sh /usr/local/bin/start.sh
+COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
+
+RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
+  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh
+
+# Add temporary patches
+COPY patch/patches.tar /tmp
+RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
+
 USER www-data
 WORKDIR /var/www
 RUN xauth add ylaho3:0 MIT-MAGIC-COOKIE-1 083b320b62214727060c3468777f3333
 
-COPY --chown=www-data:www-data mcthemes.tar.xz /var/www/mcthemes.tar.xz
-COPY .bashrc /root/.bashrc
-COPY --chown=www-data:www-data .bashrc /var/www/.bashrc
-COPY --chown=www-data:www-data .dataprinter /var/www/.dataprinter
+COPY --chown=www-data:www-data configs/mcthemes.tar.xz /var/www/mcthemes.tar.xz
+COPY configs/.bashrc /root/.bashrc
+COPY --chown=www-data:www-data configs/.bashrc /var/www/.bashrc
+COPY --chown=www-data:www-data configs/.dataprinter /var/www/.dataprinter
 
 RUN cd /var/www && \
   mkdir -p .config/mc && \
@@ -279,4 +282,4 @@ RUN cd /var/www && \
 WORKDIR /srv/ledgersmb
 
 CMD ["start.sh"]
-#!/bin/bash -x
+
