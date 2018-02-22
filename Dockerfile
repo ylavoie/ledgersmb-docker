@@ -120,6 +120,31 @@ ENV DEFAULT_DB lsmb
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 --shell /bin/bash www-data
 
+ARG PERLBREW_ROOT=/opt/perlbrew
+ARG PERL_VERSION=5.18.4
+ARG PERL_BUILD=
+
+RUN bash -c '\curl -L https://install.perlbrew.pl | bash'
+
+ENV PATH $PERLBREW_ROOT/bin:$PATH
+ENV PERLBREW_PATH $PERLBREW_ROOT/bin
+
+RUN perlbrew install $PERL_BUILD perl-$PERL_VERSION
+RUN perlbrew install $PERL_BUILD perl-5.20.0
+RUN perlbrew install-cpanm
+RUN bash -c 'source $PERLBREW_ROOT/etc/bashrc'
+
+ENV PERLBREW_ROOT $PERLBREW_ROOT
+ENV PATH $PERLBREW_ROOT/perls/perl-$PERL_VERSION/bin:$PATH
+ENV PERLBREW_PERL perl-$PERL_VERSION
+ENV PERLBREW_MANPATH $PELRBREW_ROOT/perls/perl-$PERL_VERSION/man
+ENV PERLBREW_SKIP_INIT 1
+
+RUN \
+  DEBIAN_FRONTEND=noninteractive apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get -y install \
+    libexpat-dev
+
 WORKDIR /srv/ledgersmb
 
 COPY configs/cpanfile /srv/ledgersmb/cpanfile
@@ -152,6 +177,20 @@ RUN cpanm --force Data::Printer Data::Dumper Smart::Comments \
     Plack::Middleware::InteractiveDebugger \
     WebService::Validator::HTML::W3C && \
     npm install floatthead
+
+# Make sure that Moose doesn't stay around 2.1202 or you'll get
+# `Invalid version format (version required) at ... /5.18.1/Module/Runtime.pm line 386.`
+RUN cpanm Moose
+
+# make sure new bash instances use the new perl
+RUN echo "source /opt/perlbrew/etc/bashrc && perlbrew switch 5.18.4" >> ~/.bashrc
+
+# Also set the environment when not using bash
+ENV PERLBREW_ROOT=/opt/perlbrew
+ENV PERLBREW_HOME=/tmp/.perlbrew
+ENV PERLBREW_PATH=/opt/perlbrew/bin:/opt/perlbrew/perls/current/bin
+ENV PATH=${PERLBREW_PATH}:${PATH}
+ENV PERLBREW_MANPATH=/opt/perlbrew/perls/current/man
 
 # Work around an aufs bug related to directory permissions:
 RUN mkdir -p /tmp && \
@@ -282,4 +321,3 @@ RUN cd /var/www && \
 WORKDIR /srv/ledgersmb
 
 CMD ["start.sh"]
-
