@@ -73,12 +73,6 @@ RUN apt-get update && \
   && rm -rf /var/lib/apt/lists/*
 RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
 
-## See also https://github.com/Yelp/dumb-init
-#RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.1/dumb-init_1.2.1_amd64.deb \
-# && dpkg -i dumb-init_*.deb \
-# && rm dumb-init_*.deb
-#ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-
 # Add Tini
 ENV TINI_VERSION v0.16.1
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
@@ -243,14 +237,14 @@ RUN apt-get update -qqy \
             libfreetype6 libfreetype6-dev \
             libfontconfig1 libfontconfig1-dev \
   && cd /var/www \
-  && wget https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 \
-  && tar xvjf $PHANTOM_JS.tar.bz2 \
+  && wget --no-verbose https://github.com/Medium/phantomjs/releases/download/v2.1.1/$PHANTOM_JS.tar.bz2 \
+  && tar xjf $PHANTOM_JS.tar.bz2 \
   && mv $PHANTOM_JS /usr/local/share \
   && rm /usr/bin/phantomjs \
   && ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/bin
 
 # Chromedriver
-#RUN wget -q https://chromedriver.storage.googleapis.com/2.35/chromedriver_linux64.zip \
+#RUN wget --no-verbose https://chromedriver.storage.googleapis.com/2.35/chromedriver_linux64.zip \
 # && unzip chromedriver_linux64.zip \
 # && sudo chmod +x chromedriver \
 # && sudo mv chromedriver /usr/bin/ \
