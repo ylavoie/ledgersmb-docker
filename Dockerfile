@@ -60,7 +60,9 @@ RUN \
     python-pip python-urllib3 python-six npm
 #   libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl
 RUN pip install transifex-client || :
-RUN npm install -g uglify-js@">=2.0 <3.0"
+#RUN npm install -g uglify-js@">=2.0 <3.0"
+RUN apt-get update && \
+  apt-get install -qyy uglifyjs
 
 # Local development tools
 RUN apt-get update && \
@@ -101,8 +103,8 @@ RUN make dojo
 # Configure outgoing mail to use host, other run time variable defaults
 
 ## sSMTP
-ENV SSMTP_ROOT ar@example.com
-ENV SSMTP_MAILHUB 172.17.0.1
+ENV SSMTP_ROOT ylavoie@ylavoie.com
+ENV SSMTP_MAILHUB 192.168.30.253:143
 ENV SSMTP_HOSTNAME 172.17.0.1
 #ENV SSMTP_USE_STARTTLS
 #ENV SSMTP_AUTH_USER
@@ -120,25 +122,25 @@ ENV DEFAULT_DB lsmb
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 --shell /bin/bash www-data
 
-ARG PERLBREW_ROOT=/opt/perlbrew
-ARG PERL_VERSION=5.18.4
-ARG PERL_BUILD=
+#ARG PERLBREW_ROOT=/opt/perlbrew
+#ARG PERL_VERSION=5.18.4
+#ARG PERL_BUILD=
 
-RUN bash -c '\curl -L https://install.perlbrew.pl | bash'
+#RUN bash -c '\curl -L https://install.perlbrew.pl | bash'
 
-ENV PATH $PERLBREW_ROOT/bin:$PATH
-ENV PERLBREW_PATH $PERLBREW_ROOT/bin
+#ENV PATH $PERLBREW_ROOT/bin:$PATH
+#ENV PERLBREW_PATH $PERLBREW_ROOT/bin
 
-RUN perlbrew install $PERL_BUILD perl-$PERL_VERSION
-RUN perlbrew install $PERL_BUILD perl-5.20.0
-RUN perlbrew install-cpanm
-RUN bash -c 'source $PERLBREW_ROOT/etc/bashrc'
+#RUN perlbrew install $PERL_BUILD perl-$PERL_VERSION
+#RUN perlbrew install $PERL_BUILD perl-5.20.0
+#RUN perlbrew install-cpanm
+#RUN bash -c 'source $PERLBREW_ROOT/etc/bashrc'
 
-ENV PERLBREW_ROOT $PERLBREW_ROOT
-ENV PATH $PERLBREW_ROOT/perls/perl-$PERL_VERSION/bin:$PATH
-ENV PERLBREW_PERL perl-$PERL_VERSION
-ENV PERLBREW_MANPATH $PELRBREW_ROOT/perls/perl-$PERL_VERSION/man
-ENV PERLBREW_SKIP_INIT 1
+#ENV PERLBREW_ROOT $PERLBREW_ROOT
+#ENV PATH $PERLBREW_ROOT/perls/perl-$PERL_VERSION/bin:$PATH
+#ENV PERLBREW_PERL perl-$PERL_VERSION
+#ENV PERLBREW_MANPATH $PELRBREW_ROOT/perls/perl-$PERL_VERSION/man
+#ENV PERLBREW_SKIP_INIT 1
 
 RUN \
   DEBIAN_FRONTEND=noninteractive apt-get update && \
@@ -175,22 +177,21 @@ RUN cpanm --force Data::Printer Data::Dumper Smart::Comments \
     Plack::Middleware::Debug::TraceENV \
     Plack::Middleware::Debug::W3CValidate \
     Plack::Middleware::InteractiveDebugger \
-    WebService::Validator::HTML::W3C && \
-    npm install floatthead
+    WebService::Validator::HTML::W3C
 
 # Make sure that Moose doesn't stay around 2.1202 or you'll get
 # `Invalid version format (version required) at ... /5.18.1/Module/Runtime.pm line 386.`
 RUN cpanm Moose
 
-# make sure new bash instances use the new perl
-RUN echo "source /opt/perlbrew/etc/bashrc && perlbrew switch 5.18.4" >> ~/.bashrc
+## make sure new bash instances use the new perl
+#RUN echo "source /opt/perlbrew/etc/bashrc && perlbrew switch 5.18.4" >> ~/.bashrc
 
-# Also set the environment when not using bash
-ENV PERLBREW_ROOT=/opt/perlbrew
-ENV PERLBREW_HOME=/tmp/.perlbrew
-ENV PERLBREW_PATH=/opt/perlbrew/bin:/opt/perlbrew/perls/current/bin
-ENV PATH=${PERLBREW_PATH}:${PATH}
-ENV PERLBREW_MANPATH=/opt/perlbrew/perls/current/man
+## Also set the environment when not using bash
+#ENV PERLBREW_ROOT=/opt/perlbrew
+#ENV PERLBREW_HOME=/tmp/.perlbrew
+#ENV PERLBREW_PATH=/opt/perlbrew/bin:/opt/perlbrew/perls/current/bin
+#ENV PATH=${PERLBREW_PATH}:${PATH}
+#ENV PERLBREW_MANPATH=/opt/perlbrew/perls/current/man
 
 # Work around an aufs bug related to directory permissions:
 RUN mkdir -p /tmp && \
@@ -225,37 +226,12 @@ COPY sql-ledger/users/members /usr/share/sql-ledger/users/members
 RUN apt-get update -y \
   && DEBIAN_FRONTEND=noninteractive \
      apt-get -qq install -y avahi-daemon avahi-discover avahi-utils libnss-mdns \
-                            iputils-ping dnsutils \
+                            iputils-ping dnsutils tclsh expect \
                             tcpdump psmisc phantomjs wget unzip \
                             chromium-browser chromium-chromedriver \
   && apt-get -qq -y autoclean \
   && apt-get -qq -y autoremove \
   && apt-get -qq -y clean
-
-# Chromedriver
-#RUN wget -q https://chromedriver.storage.googleapis.com/2.35/chromedriver_linux64.zip \
-# && unzip chromedriver_linux64.zip \
-# && sudo chmod +x chromedriver \
-# && sudo mv chromedriver /usr/bin/ \
-# && rm chromedriver_linux64.zip
-
-# Geckodriver
-RUN wget -q https://github.com/mozilla/geckodriver/releases/download/v0.19.1/geckodriver-v0.19.1-linux64.tar.gz \
- && tar -x geckodriver -zf geckodriver-v0.19.1-linux64.tar.gz -O > /usr/bin/geckodriver \
- && chmod +x /usr/bin/geckodriver \
- && rm geckodriver-v0.19.1-linux64.tar.gz
-
-ARG FIREFOX_VERSION=57.0.4
-RUN apt-get update -qqy \
-  && apt-get -qqy --no-install-recommends install firefox \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-  && wget --no-verbose -O /tmp/firefox.tar.bz2 https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2 \
-  && apt-get -y purge firefox \
-  && rm -rf /opt/firefox \
-  && tar -C /opt -xjf /tmp/firefox.tar.bz2 \
-  && rm /tmp/firefox.tar.bz2 \
-  && mv /opt/firefox /opt/firefox-$FIREFOX_VERSION \
-  && ln -fs /opt/firefox-$FIREFOX_VERSION/firefox /usr/bin/firefox
 
 #===========
 # PhantomJS
@@ -273,10 +249,15 @@ RUN apt-get update -qqy \
   && rm /usr/bin/phantomjs \
   && ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/bin
 
-#============
+# Chromedriver
+#RUN wget -q https://chromedriver.storage.googleapis.com/2.35/chromedriver_linux64.zip \
+# && unzip chromedriver_linux64.zip \
+# && sudo chmod +x chromedriver \
+# && sudo mv chromedriver /usr/bin/ \
+# && rm chromedriver_linux64.zip
+
 # GeckoDriver
-#============
-ARG GECKODRIVER_VERSION=0.19.1
+ARG GECKODRIVER_VERSION=0.20.0
 RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux64.tar.gz \
   && rm -rf /opt/geckodriver \
   && tar -C /opt -zxf /tmp/geckodriver.tar.gz \
@@ -284,6 +265,26 @@ RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geck
   && mv /opt/geckodriver /opt/geckodriver-$GECKODRIVER_VERSION \
   && chmod 755 /opt/geckodriver-$GECKODRIVER_VERSION \
   && ln -fs /opt/geckodriver-$GECKODRIVER_VERSION /usr/bin/geckodriver
+
+# Firefox
+RUN apt-get update -qqy \
+  && apt-get -qqy --no-install-recommends install firefox \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
+  && apt-get -y purge firefox \
+  && rm -rf /opt/firefox
+
+# Releases versions
+# ARG FIREFOX_VERSION=59.0.2
+# ENV FF_PATH https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
+# Candidates versions
+ARG FIREFOX_VERSION=60.0b10
+ENV FF_PATH=https://download-installer.cdn.mozilla.net/pub/firefox/candidates/$FIREFOX_VERSION-candidates/build1/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
+#
+RUN wget --no-verbose -O /tmp/firefox.tar.bz2 $FF_PATH
+RUN tar -C /opt -xjf /tmp/firefox.tar.bz2 \
+  && rm /tmp/firefox.tar.bz2 \
+  && mv /opt/firefox /opt/firefox-$FIREFOX_VERSION \
+  && ln -fs /opt/firefox-$FIREFOX_VERSION/firefox /usr/bin/firefox
 
 # Avahi
 ADD configs/avahi.conf /etc/dbus-1/system.d/avahi.conf
@@ -299,8 +300,8 @@ RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
   chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh
 
 # Add temporary patches
-COPY patch/patches.tar /tmp
-RUN cd / && tar xvf /tmp/patches.tar && rm /tmp/patches.tar
+COPY patch/patches.tar.xz /tmp
+RUN cd / && tar Jxf /tmp/patches.tar.xz && rm /tmp/patches.tar.xz
 
 USER www-data
 WORKDIR /var/www

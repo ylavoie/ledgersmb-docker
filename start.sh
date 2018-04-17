@@ -52,10 +52,10 @@ export PATH=$PATH:/usr/lib/chromium-browser
 if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" != "1" ]]; then
   #SERVER=Starman
   SERVER=HTTP::Server::PSGI
-  PSGI=tools/starman.psgi
+  PSGI=bin/ledgersmb-server.psgi
 else
   SERVER=HTTP::Server::PSGI
-  PSGI=tools/starman-development.psgi
+  PSGI=utils/devel/ledgersmb-server-development.psgi
   OPT="--workers 1 --env development"
 fi
 
