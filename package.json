@@ -1,0 +1,76 @@
+{
+  "name": "ledgersmb-js",
+  "version": "1.6.0",
+  "description": "LedgerSMB JS files",
+  "keywords": ["JavaScript", "Dojo", "Toolkit", "Dijit", "lsmb"],
+  "maintainers": [{
+    "name": "Erik Huelsmann"
+  },{
+    "name": "Chris Travers"
+  }],
+  "contributors": [{
+    "name": "John Locke"
+  },{
+    "name": "David Godfrey"
+  },{
+    "name": "Yves Lavoie"
+  }],
+  "bugs": "https://github.com/ledgersmb/LedgerSMB/issues",
+  "repository": [{
+    "type": "git",
+    "url": "git+https://github.com/ledgersmb/LedgerSMB.git"
+  }],
+  "devDependencies": {
+    "babel-core": "*",
+    "babel-eslint": "*",
+    "babel-loader": "*",
+    "babel-plugin-transform-remove-strict-mode": "*",
+    "babel-plugin-transform-runtime": "*",
+    "babel-preset-env": "*",
+    "babel-preset-react": "*",
+    "copy-webpack-plugin": "*",
+    "css-loader": "*",
+    "dojo-webpack-plugin": "*",
+    "eslint": "*",
+    "eslint-config-airbnb": "*",
+    "eslint-loader": "*",
+    "eslint-plugin-import": "*",
+    "eslint-plugin-jsx-a11y": "*",
+    "eslint-plugin-react": "*",
+    "extract-text-webpack-plugin": "*",
+    "html-loader": "*",
+    "html-webpack-plugin": "*",
+    "less": "*",
+    "less-loader": "*",
+    "material-ui": "*",
+    "mini-css-extract-plugin": "*",
+    "optimize-css-assets-webpack-plugin": "*",
+    "raw-loader": "*",
+    "react": "*",
+    "react-activity": "*",
+    "react-dom": "*",
+    "react-redux": "*",
+    "redux": "*",
+    "style-loader": "*",
+    "tapable": "*",
+    "uglifyjs-webpack-plugin": "*",
+    "url-loader": "*",
+    "webpack": "*",
+    "webpack-bundle-analyzer": "*",
+    "webpack-cli": "*",
+    "webpack-hasjs-plugin": "*",
+    "webpack-i18n-extractor-plugin": "*",
+    "webpack-dashboard": "*",
+    "webpack-sources": "*"
+  },
+  "dependencies": {
+    "dojo": "~1.11",
+    "dijit": "~1.11"
+  },
+  "main": "src",
+  "homepage": "http://ledgersmb.org/",
+  "dojoBuild": "lsmb.profile.js",
+  "scripts": {
+    "build": "node node_modules/webpack/bin/webpack.js --config webpack.config.js"
+  }
+}

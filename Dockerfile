@@ -51,14 +51,9 @@ RUN \
     ssmtp \
     lsb-release \
     postgresql-client libpq-dev \
-    libtry-tiny-perl libx12-parser-perl \
     libfile-mimeinfo-perl \
-    libhtml-parser-perl \
     libjson-maybexs-perl \
     libwww-perl \
-    libspreadsheet-writeexcel-perl \
-    libole-storage-lite-perl libparse-recdescent-perl \
-    libxml-twig-perl \
     git cpanminus make gcc libperl-dev libcarp-always-perl \
     gettext procps libtap-parser-sourcehandler-pgtap-perl \
     libtest-dependencies-perl libtest-exception-perl libtest-trap-perl \
@@ -67,6 +62,11 @@ RUN \
     libmodule-install-perl \
     python-pip python-urllib3 python-six
 #   libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl uglify
+#    libxml-twig-perl \
+#    libtry-tiny-perl libx12-parser-perl \
+#    libhtml-parser-perl \
+#    libspreadsheet-writeexcel-perl \
+#    libole-storage-lite-perl libparse-recdescent-perl \
 RUN pip install transifex-client || :
 RUN wget --quiet -O - https://deb.nodesource.com/setup_10.x | bash -
 
@@ -185,7 +185,7 @@ RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
 
 # install necessary stuff; avahi, and ssh such that we can log in and control avahi
 RUN apt-get update -y \
-  && DEBIAN_FRONTEND=noninteractive \
+  && DEBIAN_FRONTEND="noninteractive" \
      apt-get -qq install -y avahi-daemon avahi-discover avahi-utils libnss-mdns \
                             iputils-ping dnsutils tclsh expect \
                             tcpdump psmisc phantomjs wget unzip \

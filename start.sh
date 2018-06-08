@@ -12,8 +12,8 @@ sudo sed "s/\(host-name=\).*/\1${MDNS_HOSTNAME}/g" \
     -i /etc/avahi/avahi-daemon.conf
 
 # Required services for mDNS to work on debian
-sudo /etc/init.d/dbus restart
-sudo /etc/init.d/avahi-daemon restart
+sudo /etc/init.d/dbus start
+sudo /etc/init.d/avahi-daemon start
 
 # Some logging
 echo
