@@ -59,10 +59,11 @@ if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" != "1" ]]; then
   #SERVER=Starman
   SERVER=HTTP::Server::PSGI
   PSGI=bin/ledgersmb-server.psgi
+  OPT="-I . -I lib -I old/lib"
 else
   SERVER=HTTP::Server::PSGI
   PSGI=utils/devel/ledgersmb-server-development.psgi
-  OPT="--workers 1 --env development"
+  OPT="-I . -I lib -I old/lib --workers 1 --env development"
 fi
 
 set -x
