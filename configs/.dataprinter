@@ -3,6 +3,6 @@
     filters => {
         'LedgerSMB::PGDate'   => sub { $_[0]->ymd },
         'LedgerSMB::PGNumber' => sub { $_[0]->to_output },
+        'Selenium::Remote::WebElement' => sub { $_[0]->id },
     }
 }
-

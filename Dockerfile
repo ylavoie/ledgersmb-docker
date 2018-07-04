@@ -34,9 +34,7 @@ RUN \
     liblog-log4perl-perl libmime-lite-perl libmime-types-perl \
     libmath-bigint-gmp-perl libmodule-runtime-perl libmoose-perl \
     libmoosex-nonmoose-perl libnumber-format-perl \
-    libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl \
-    libpgobject-type-bytestring-perl libpgobject-util-dbmethod-perl \
-    libpgobject-util-dbadmin-perl libplack-perl \
+    libplack-perl \
     libplack-middleware-reverseproxy-perl \
     libtemplate-perl libtext-csv-perl libtext-csv-xs-perl \
     libtext-markdown-perl libxml-simple-perl \
@@ -61,6 +59,9 @@ RUN \
     libclass-trigger-perl libclass-accessor-lite-perl libtest-requires-perl \
     libmodule-install-perl \
     python-pip python-urllib3 python-six
+#    libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl \
+#    libpgobject-type-bytestring-perl libpgobject-util-dbmethod-perl \
+#    libpgobject-util-dbadmin-perl \
 #   libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl uglify
 #    libxml-twig-perl \
 #    libtry-tiny-perl libx12-parser-perl \
@@ -219,7 +220,7 @@ RUN wget --no-verbose https://chromedriver.storage.googleapis.com/2.38/chromedri
  && rm chromedriver_linux64.zip
 
 # GeckoDriver
-ARG GECKODRIVER_VERSION=0.20.0
+ARG GECKODRIVER_VERSION=0.20.1
 RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux64.tar.gz \
   && rm -rf /opt/geckodriver \
   && tar -C /opt -zxf /tmp/geckodriver.tar.gz \
@@ -236,11 +237,11 @@ RUN apt-get update -qqy \
   && rm -rf /opt/firefox
 
 # Releases versions
-# ARG FIREFOX_VERSION=59.0.2
-# ENV FF_PATH https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
+ARG FIREFOX_VERSION=61.0
+ENV FF_PATH https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
 # Candidates versions
-ARG FIREFOX_VERSION=60.0b10
-ENV FF_PATH=https://download-installer.cdn.mozilla.net/pub/firefox/candidates/$FIREFOX_VERSION-candidates/build1/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
+#ARG FIREFOX_VERSION=60.0b10
+#ENV FF_PATH=https://download-installer.cdn.mozilla.net/pub/firefox/candidates/$FIREFOX_VERSION-candidates/build1/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
 #
 RUN wget --no-verbose -O /tmp/firefox.tar.bz2 $FF_PATH
 RUN tar -C /opt -xjf /tmp/firefox.tar.bz2 \
