@@ -24,3 +24,12 @@ parse_git_branch() {
 }
 # See https://misc.flogisoft.com/bash/tip_colors_and_formatting
 PS1="\[\e[0;7;33m\][\!]\[\e[48;5;226;38;5;196m\]\u@\h\[\e[0;1;37m\]{$SHLVL}\[\e[33;1m\]\w\[\e[48;5;4;38;5;226m\]\$(parse_git_branch)\[\e[0m\]\$ "
+
+# enable bash completion in interactive shells
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi

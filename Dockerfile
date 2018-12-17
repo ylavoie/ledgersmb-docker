@@ -6,8 +6,9 @@ MAINTAINER  Freelock john@freelock.com
 # Without libclass-c3-xs-perl, everything grinds to a halt;
 # add it, because it's a 'recommends' it the dep tree, which
 # we're skipping, normally
-
-# 'master' and common dependency install:
+#
+# Installing psql client directly from instructions at https://wiki.postgresql.org/wiki/Apt
+# That mitigates issues where the PG instance is running a newer version than this container
 
 RUN echo "APT::Install-Recommends \"false\";\nAPT::Install-Suggests \"false\";" > /etc/apt/apt.conf.d/00recommends && \
     echo 'options ndots:2' >>/etc/resolv.conf && \
@@ -16,7 +17,7 @@ RUN echo "APT::Install-Recommends \"false\";\nAPT::Install-Suggests \"false\";" 
   DEBIAN_FRONTEND="noninteractive" apt-get -y update && \
   DEBIAN_FRONTEND="noninteractive" apt-get -y upgrade && \
   DEBIAN_FRONTEND="noninteractive" apt-get -y install \
-    curl ca-certificates gnupg2
+    wget curl ca-certificates gnupg2
 
 # We need our repository for Trusty libpgobject*
 RUN apt-get update && \
@@ -26,7 +27,7 @@ RUN apt-get update && \
 RUN \
   DEBIAN_FRONTEND="noninteractive" apt-get update && \
   DEBIAN_FRONTEND="noninteractive" apt-get -y install \
-    libcgi-emulate-psgi-perl libconfig-inifiles-perl \
+    libcgi-emulate-psgi-perl libcgi-simple-perl libconfig-inifiles-perl \
     libdbd-pg-perl libdbi-perl libdata-uuid-perl libdatetime-perl \
     libdatetime-format-strptime-perl libio-stringy-perl \
     libjson-xs-perl libcpanel-json-xs-perl liblist-moreutils-perl \
@@ -34,7 +35,9 @@ RUN \
     liblog-log4perl-perl libmime-lite-perl libmime-types-perl \
     libmath-bigint-gmp-perl libmodule-runtime-perl libmoose-perl \
     libmoosex-nonmoose-perl libnumber-format-perl \
-    libplack-perl \
+    libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl \
+    libpgobject-type-bytestring-perl libpgobject-util-dbmethod-perl \
+    libpgobject-util-dbadmin-perl libplack-perl \
     libplack-middleware-reverseproxy-perl \
     libtemplate-perl libtext-csv-perl libtext-csv-xs-perl \
     libtext-markdown-perl libxml-simple-perl \
@@ -59,10 +62,7 @@ RUN \
     libclass-trigger-perl libclass-accessor-lite-perl libtest-requires-perl \
     libmodule-install-perl \
     python-pip python-urllib3 python-six
-#    libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl \
-#    libpgobject-type-bytestring-perl libpgobject-util-dbmethod-perl \
-#    libpgobject-util-dbadmin-perl \
-#   libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl uglify
+#    libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl uglify \
 #    libxml-twig-perl \
 #    libtry-tiny-perl libx12-parser-perl \
 #    libhtml-parser-perl \
@@ -90,6 +90,16 @@ ENTRYPOINT ["/tini", "--"]
 ENV LSMB_VERSION master
 ENV NODE_PATH /usr/local/lib/node_modules
 
+
+###########################################################
+# Java & Nodejs for doing Dojo build
+# Uglify needs to be installed right before 'make dojo'?!
+
+# These packages are only needed during the dojo build
+ENV DOJO_Build_Deps git make gcc libperl-dev curl nodejs
+# These packages can be removed after the dojo build
+ENV DOJO_Build_Deps_removal ${DOJO_Build_Deps} nodejs
+
 # Install LedgerSMB
 WORKDIR /srv
 RUN git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSMB.git ledgersmb
@@ -97,7 +107,13 @@ RUN git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSM
 WORKDIR /srv/ledgersmb
 
 # Build dojo
-RUN make dojo
+RUN npm install -g uglify-js@">=2.0 <3.0" \
+ && make dojo
+
+# Cleanup args that are for internal use
+ENV DOJO_Build_Deps=
+ENV DOJO_Build_Deps_removal=
+ENV NODE_PATH=
 
 # Configure outgoing mail to use host, other run time variable defaults
 
@@ -213,14 +229,24 @@ RUN apt-get update -qqy \
   && rm /var/www/$PHANTOM_JS.tar.bz2
 
 # Chromedriver
-RUN wget --no-verbose https://chromedriver.storage.googleapis.com/2.38/chromedriver_linux64.zip \
+RUN wget --no-verbose https://chromedriver.storage.googleapis.com/2.42/chromedriver_linux64.zip \
  && unzip chromedriver_linux64.zip \
  && sudo chmod +x chromedriver \
  && sudo mv chromedriver /usr/bin/ \
  && rm chromedriver_linux64.zip
+RUN wget --no-verbose https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+ && sudo apt-get update -y \
+ && DEBIAN_FRONTEND="noninteractive" \
+    sudo apt-get install -y libappindicator1 libappindicator3-1 libindicator3-7 libdbusmenu-gtk3-4 fonts-liberation \
+ && sudo dpkg -i google-chrome*.deb \
+ && apt-get -f install \
+ && rm google-chrome-stable_current_amd64.deb \
+ && apt-get -qq -y autoclean \
+ && apt-get -qq -y autoremove \
+ && apt-get -qq -y clean
 
 # GeckoDriver
-ARG GECKODRIVER_VERSION=0.20.1
+ARG GECKODRIVER_VERSION=0.21.0
 RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux64.tar.gz \
   && rm -rf /opt/geckodriver \
   && tar -C /opt -zxf /tmp/geckodriver.tar.gz \
@@ -237,7 +263,7 @@ RUN apt-get update -qqy \
   && rm -rf /opt/firefox
 
 # Releases versions
-ARG FIREFOX_VERSION=61.0
+ARG FIREFOX_VERSION=57.0
 ENV FF_PATH https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
 # Candidates versions
 #ARG FIREFOX_VERSION=60.0b10
@@ -275,6 +301,7 @@ RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
 # Add temporary patches
 COPY patch/patches.tar.xz /tmp
 RUN cd / && tar Jxf /tmp/patches.tar.xz && rm /tmp/patches.tar.xz
+RUN cpanm --quiet --notest --force Time::Format Time::HiRes
 
 # React stuff
 #TODO: Find cpanfile equivalent
@@ -284,9 +311,9 @@ ENV NODE_ENV=development
 #
 USER www-data
 WORKDIR /var/www
-COPY package.json /var/www/package.json
-RUN npm config set registry="http://registry.npmjs.org/"
-RUN npm install --save-dev
+#COPY package.json /var/www/package.json
+#RUN npm config set registry="http://registry.npmjs.org/"
+#RUN npm install --save-dev
 
 RUN xauth add ylaho3:0 MIT-MAGIC-COOKIE-1 083b320b62214727060c3468777f3333
 
