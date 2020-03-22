@@ -1,5 +1,7 @@
-FROM        ubuntu:trusty
+FROM        ubuntu:bionic
 MAINTAINER  Freelock john@freelock.com
+
+ARG POSTGRESQL_VERSION=10
 
 # Install Perl, Tex, Starman, psql client, and all dependencies
 #
@@ -11,15 +13,13 @@ MAINTAINER  Freelock john@freelock.com
 # That mitigates issues where the PG instance is running a newer version than this container
 
 RUN echo "APT::Install-Recommends \"false\";\nAPT::Install-Suggests \"false\";" > /etc/apt/apt.conf.d/00recommends && \
-    echo 'options ndots:2' >>/etc/resolv.conf && \
-    echo 'Acquire::http { Proxy "http://nameserver:3142"; };' >> /etc/apt/apt.conf.d/02proxy && \
   DEBIAN_FRONTEND="noninteractive" apt-mark hold sensible-utils && \
   DEBIAN_FRONTEND="noninteractive" apt-get -y update && \
   DEBIAN_FRONTEND="noninteractive" apt-get -y upgrade && \
   DEBIAN_FRONTEND="noninteractive" apt-get -y install \
     wget curl ca-certificates gnupg2
 
-# We need our repository for Trusty libpgobject*
+# We need our repository for libpgobject*
 RUN apt-get update && \
     apt-get -y install software-properties-common wget && \
     add-apt-repository ppa:ledgersmb/main
@@ -71,14 +71,21 @@ RUN \
 RUN pip install transifex-client || :
 RUN wget --quiet -O - https://deb.nodesource.com/setup_10.x | bash -
 
+RUN \
+  DEBIAN_FRONTEND="noninteractive" apt-get update && \
+  apt-get -y install \
+    libstring-random-perl libcookie-baker-perl libdata-uuid-perl libstring-random-perl
+
 # Local development tools
 RUN apt-get update && \
   apt-get install -qyy mc gettext sudo bzip2 bash-completion less meld xauth \
-                   lynx dnsutils net-tools xz-utils nodejs \
+                   lynx dnsutils net-tools xz-utils nodejs locales \
   && DEBIAN_FRONTEND="noninteractive" apt-get -y autoremove \
   && DEBIAN_FRONTEND="noninteractive" apt-get -y autoclean \
   && rm -rf /var/lib/apt/lists/*
 #RUN update-alternatives --install /usr/bin/node nodejs /usr/bin/nodejs 100
+RUN locale-gen fr_CA.UTF-8
+RUN locale-gen en_US.UTF-8
 
 # Add Tini
 ENV TINI_VERSION v0.16.1
@@ -180,7 +187,8 @@ RUN cpanm Moose
 
 # Work around an aufs bug related to directory permissions:
 RUN mkdir -p /tmp && \
-  chmod 1777 /tmp
+  chmod 1777 /tmp && \
+  chown www-data:www-data /tmp
 
 # Internal Port Expose
 EXPOSE 5001
@@ -275,6 +283,14 @@ RUN tar -C /opt -xjf /tmp/firefox.tar.bz2 \
   && mv /opt/firefox /opt/firefox-$FIREFOX_VERSION \
   && ln -fs /opt/firefox-$FIREFOX_VERSION/firefox /usr/bin/firefox
 
+# Use the proper pg_dumpall version
+RUN apt-get update && \
+    DEBIAN_FRONTEND="noninteractive" apt-get install -qyy curl ca-certificates gnupg && \
+    curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && \
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && \
+    apt-get update && \
+    DEBIAN_FRONTEND="noninteractive" apt-get install -qyy postgresql-client-$POSTGRESQL_VERSION
+
 # Bust the Docker cache based on a flag file,
 # computed from the SHA of the head of git tree (when bind mounted)
 COPY --chown=www-data:www-data ledgersmb.rebuild /var/www/ledgersmb.rebuild
@@ -301,9 +317,14 @@ RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
 # Add temporary patches
 COPY patch/patches.tar.xz /tmp
 RUN cd / && tar Jxf /tmp/patches.tar.xz && rm /tmp/patches.tar.xz
-RUN cpanm --quiet --notest --force Time::Format Time::HiRes
+RUN cpanm --quiet --notest --force \
+          Time::Format Time::HiRes TAP::Filter HTML::FromANSI Long::Jump goto::file \
+          Test2::Plugin::UUID Test2::Plugin::MemUsage Test::Simple App::Yath \
+          Devel::PrettyTrace Test2::Bundle::SpecDeclare B::DeparseTree
 
-# React stuff
+# React/Vue stuff
+#RUN apt-get update && \
+#    apt-get -y install webpack
 #TODO: Find cpanfile equivalent
 ENV NODE_PATH=UI/node_modules
 ENV NODE_ENV=development
@@ -311,23 +332,28 @@ ENV NODE_ENV=development
 #
 USER www-data
 WORKDIR /var/www
-#COPY package.json /var/www/package.json
-#RUN npm config set registry="http://registry.npmjs.org/"
-#RUN npm install --save-dev
+COPY package.json /var/www/
+COPY webpack.config.js /var/www
+COPY serve.config.js /var/www/
+RUN npm config set registry="http://registry.npmjs.org/"
+RUN npm install --save-dev webpack webpack-cli
 
+#RUN cat /etc/resolv.conf
+#RUN nslookup ylaho3
 RUN xauth add ylaho3:0 MIT-MAGIC-COOKIE-1 083b320b62214727060c3468777f3333
+#RUN xauth add nameserver:10 MIT-MAGIC-COOKIE-1 083b320b62214727060c3468777f3333
 
+COPY --chown=www-data:www-data configs/mc.tar.xz /var/www/mc.tar.xz
 COPY --chown=www-data:www-data configs/mcthemes.tar.xz /var/www/mcthemes.tar.xz
 COPY configs/.bashrc /root/.bashrc
 COPY --chown=www-data:www-data configs/.bashrc /var/www/.bashrc
 COPY --chown=www-data:www-data configs/.dataprinter /var/www/.dataprinter
 
 RUN cd /var/www && \
-  mkdir -p .config/mc && \
-  touch .config/mc/ini && \
+  tar Jxf mc.tar.xz && \
   tar Jxf mcthemes.tar.xz && \
   ./mcthemes/mc_change_theme.sh mcthemes/puthre.theme && \
-  rm mcthemes.tar.xz
+  rm mc*.tar.xz
 
 WORKDIR /srv/ledgersmb
 
