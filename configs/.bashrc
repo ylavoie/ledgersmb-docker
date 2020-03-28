@@ -17,8 +17,9 @@ fi
 
 eval "`dircolors -b`"
 alias ls='ls --color=auto'
-alias webpack='/srv/ledgersmb/UI/node_modules/.bin/webpack --colors'
+#alias webpack='/srv/ledgersmb/UI/node_modules/.bin/webpack --colors --display-error-details'
 
+PATH="~/node_modules/.bin:${PATH}"
 parse_git_branch() {
      git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
 }

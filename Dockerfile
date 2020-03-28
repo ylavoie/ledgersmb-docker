@@ -69,7 +69,7 @@ RUN \
 #    libspreadsheet-writeexcel-perl \
 #    libole-storage-lite-perl libparse-recdescent-perl \
 RUN pip install transifex-client || :
-RUN wget --quiet -O - https://deb.nodesource.com/setup_10.x | bash -
+RUN wget --quiet -O - https://deb.nodesource.com/setup_12.x | bash -
 
 RUN \
   DEBIAN_FRONTEND="noninteractive" apt-get update && \
@@ -326,7 +326,7 @@ RUN cpanm --quiet --notest --force \
 #RUN apt-get update && \
 #    apt-get -y install webpack
 #TODO: Find cpanfile equivalent
-ENV NODE_PATH=UI/node_modules
+ENV NODE_PATH=~/node_modules
 ENV NODE_ENV=development
 
 #
@@ -335,8 +335,9 @@ WORKDIR /var/www
 COPY package.json /var/www/
 COPY webpack.config.js /var/www
 COPY serve.config.js /var/www/
-RUN npm config set registry="http://registry.npmjs.org/"
+#RUN npm config set registry="http://registry.npmjs.org/"
 RUN npm install --save-dev webpack webpack-cli
+RUN npm install
 
 #RUN cat /etc/resolv.conf
 #RUN nslookup ylaho3

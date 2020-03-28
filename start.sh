@@ -24,10 +24,11 @@ update_ssmtp.sh
 ln -s /var/www/node_modules /srv/ledgersmb/UI/node_modules
 
 cd /srv/ledgersmb
+sudo cp utils/TAP/Filter/MyFilter.pm /usr/local/share/perl/`perl -e 'print substr($^V, 1)'`/TAP/Filter/
 
 #TODO: Why?
-ln -s umd/react.development.js UI/node_modules/react/react.js
-ln -s umd/react-dom.development.js UI/node_modules/react-dom/react-dom.js
+#ln -s umd/react.development.js UI/node_modules/react/react.js
+#ln -s umd/react-dom.development.js UI/node_modules/react-dom/react-dom.js
 
 if [[ ! -f ledgersmb.conf ]]; then
   cp conf/ledgersmb.conf.default ledgersmb.conf
@@ -68,5 +69,5 @@ fi
 
 set -x
 # start ledgersmb
-exec plackup --port 5001 --server $SERVER $PSGI $OPT \
-      --Reload "lib, old/lib, xt/lib, t, xt, /usr/local/share/perl, /usr/share/perl, /usr/share/perl5"
+exec plackup --port 5762 --server $SERVER $PSGI $OPT \
+      --Reload lib,old/lib,xt/lib,t,xt,/usr/local/share/perl,/usr/share/perl,/usr/share/perl5

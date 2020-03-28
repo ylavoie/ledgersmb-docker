@@ -1,76 +1,77 @@
 {
   "name": "ledgersmb-js",
-  "version": "1.6.0",
+  "version": "1.8.0",
   "description": "LedgerSMB JS files",
-  "keywords": ["JavaScript", "Dojo", "Toolkit", "Dijit", "lsmb"],
-  "maintainers": [{
-    "name": "Erik Huelsmann"
-  },{
-    "name": "Chris Travers"
-  }],
-  "contributors": [{
-    "name": "John Locke"
-  },{
-    "name": "David Godfrey"
-  },{
-    "name": "Yves Lavoie"
-  }],
+  "keywords": [
+    "JavaScript",
+    "Dojo",
+    "Toolkit",
+    "Dijit",
+    "lsmb"
+  ],
+  "maintainers": [
+    {
+      "name": "Erik Huelsmann"
+    },
+    {
+      "name": "Chris Travers"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "John Locke"
+    },
+    {
+      "name": "David Godfrey"
+    },
+    {
+      "name": "Yves Lavoie"
+    }
+  ],
   "bugs": "https://github.com/ledgersmb/LedgerSMB/issues",
-  "repository": [{
-    "type": "git",
-    "url": "git+https://github.com/ledgersmb/LedgerSMB.git"
-  }],
+  "repository": [
+    {
+      "type": "git",
+      "url": "git+https://github.com/ledgersmb/LedgerSMB.git"
+    }
+  ],
   "devDependencies": {
-    "babel-core": "*",
-    "babel-eslint": "*",
-    "babel-loader": "*",
-    "babel-plugin-transform-remove-strict-mode": "*",
-    "babel-plugin-transform-runtime": "*",
-    "babel-preset-env": "*",
-    "babel-preset-react": "*",
-    "copy-webpack-plugin": "*",
-    "css-loader": "*",
-    "dojo-webpack-plugin": "*",
-    "eslint": "*",
-    "eslint-config-airbnb": "*",
-    "eslint-loader": "*",
-    "eslint-plugin-import": "*",
-    "eslint-plugin-jsx-a11y": "*",
-    "eslint-plugin-react": "*",
-    "extract-text-webpack-plugin": "*",
-    "html-loader": "*",
-    "html-webpack-plugin": "*",
-    "less": "*",
-    "less-loader": "*",
-    "material-ui": "*",
-    "mini-css-extract-plugin": "*",
-    "optimize-css-assets-webpack-plugin": "*",
-    "raw-loader": "*",
-    "react": "*",
-    "react-activity": "*",
-    "react-dom": "*",
-    "react-redux": "*",
-    "redux": "*",
-    "style-loader": "*",
-    "tapable": "*",
-    "uglifyjs-webpack-plugin": "*",
-    "url-loader": "*",
-    "webpack": "*",
-    "webpack-bundle-analyzer": "*",
-    "webpack-cli": "*",
-    "webpack-hasjs-plugin": "*",
-    "webpack-i18n-extractor-plugin": "*",
-    "webpack-dashboard": "*",
-    "webpack-sources": "*"
+    "copy-webpack-plugin": "5.1.1",
+    "css-loader": "3.4.2",
+    "dojo-util": "1.16.2",
+    "dojo-webpack-plugin": "2.8.13",
+    "html-loader": "1.0.0",
+    "html-webpack-inline-source-plugin": "0.0.10",
+    "html-webpack-plugin": "4.0.1",
+    "less": "3.11.1",
+    "less-loader": "5.0.0",
+    "mini-css-extract-plugin": "0.9.0",
+    "style-loader": "1.1.3",
+    "url-loader": "4.0.0",
+    "terser-webpack-plugin": "2.3.5",
+    "webpack": "^4.42.1",
+    "webpack-bundle-analyzer": "3.6.1",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3",
+    "webpack-hasjs-plugin": "1.0.3",
+    "webpack-i18n-extractor-plugin": "2.0.7",
+    "webpack-merge-and-include-globally": "2.1.24",
+    "webpack-monitor": "1.0.14",
+    "wrapper-webpack-plugin": "2.1.0"
   },
   "dependencies": {
-    "dojo": "~1.11",
-    "dijit": "~1.11"
+    "dojo": "~1.16.2",
+    "dijit": "~1.16.2"
   },
-  "main": "src",
+  "optionalDependencies": {
+    "fsevents": "^2.1.2"
+  },
+  "main": "UI/js/bootstrap.js",
   "homepage": "http://ledgersmb.org/",
   "dojoBuild": "lsmb.profile.js",
   "scripts": {
-    "build": "node node_modules/webpack/bin/webpack.js --config webpack.config.js"
+    "build": "webpack --progress --display-error-details --display-modules",
+    "build:dev": "webpack-dashboard -- webpack --env.dev --mode development --display-modules",
+    "serve": "webpack-dev-server --env.dev"
   }
 }
