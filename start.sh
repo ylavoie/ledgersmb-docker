@@ -21,14 +21,11 @@ echo 'lsmb is up and running. You should be able to access'
 echo "it under: http://${MDNS_HOSTNAME}.local"
 
 update_ssmtp.sh
-ln -s /var/www/node_modules /srv/ledgersmb/UI/node_modules
 
 cd /srv/ledgersmb
 sudo cp utils/TAP/Filter/MyFilter.pm /usr/local/share/perl/`perl -e 'print substr($^V, 1)'`/TAP/Filter/
 
-#TODO: Why?
-#ln -s umd/react.development.js UI/node_modules/react/react.js
-#ln -s umd/react-dom.development.js UI/node_modules/react-dom/react-dom.js
+ln -s ~/node_modules node_modules
 
 if [[ ! -f ledgersmb.conf ]]; then
   cp conf/ledgersmb.conf.default ledgersmb.conf
@@ -56,8 +53,14 @@ sudo chmod 644 /etc/resolv.conf
 export QT_QPA_PLATFORM=phantom
 export PATH=$PATH:/usr/lib/chromium-browser
 
+# Ensure english by default
+export LC_ALL=en_US.UTF-8
+export LC_TIME=en_DK.UTF-8
+
 if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" != "1" ]]; then
   #SERVER=Starman
+  #SERVER=Starlight
+  #SERVER=Thrall
   SERVER=HTTP::Server::PSGI
   PSGI=bin/ledgersmb-server.psgi
   OPT="-I lib -I old/lib"
@@ -68,6 +71,14 @@ else
 fi
 
 set -x
+
 # start ledgersmb
 exec plackup --port 5762 --server $SERVER $PSGI $OPT \
-      --Reload lib,old/lib,xt/lib,t,xt,/usr/local/share/perl,/usr/share/perl,/usr/share/perl5
+      --Reload lib,old,xt/lib,t,xt,/usr/local/share/perl,/usr/share/perl,/usr/share/perl5
+
+./test2.sh
+npm run build >& tee x.x
+
+#PERL5OPT=-d:vscode PERLDB_OPTS='RemotePort=ylaho3:5002' plackup --port 5001 --server $SERVER $PSGI $OPT \
+#      --Reload lib,old,xt/lib,t,xt,/usr/local/share/perl,/usr/share/perl,/usr/share/perl5
+
