@@ -62,14 +62,14 @@ RUN \
     libclass-trigger-perl libclass-accessor-lite-perl libtest-requires-perl \
     libmodule-install-perl \
     python-pip python-urllib3 python-six
-#    libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl uglify \
+#    libpgobject-type-bigfloat-perl libpgobject-type-datetime-perl \
 #    libxml-twig-perl \
 #    libtry-tiny-perl libx12-parser-perl \
 #    libhtml-parser-perl \
 #    libspreadsheet-writeexcel-perl \
 #    libole-storage-lite-perl libparse-recdescent-perl \
 RUN pip install transifex-client || :
-RUN wget --quiet -O - https://deb.nodesource.com/setup_12.x | bash -
+RUN wget --quiet -O - https://deb.nodesource.com/setup_14.x | bash -
 
 RUN \
   DEBIAN_FRONTEND="noninteractive" apt-get update && \
@@ -88,15 +88,15 @@ RUN locale-gen fr_CA.UTF-8
 RUN locale-gen en_US.UTF-8
 
 # Add Tini
-ENV TINI_VERSION v0.16.1
+ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+#ADD tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
 # Build time variables
 ENV LSMB_VERSION master
 ENV NODE_PATH /usr/local/lib/node_modules
-
 
 ###########################################################
 # Java & Nodejs for doing Dojo build
@@ -112,17 +112,6 @@ WORKDIR /srv
 RUN git clone --recursive -b $LSMB_VERSION https://github.com/ledgersmb/LedgerSMB.git ledgersmb
 
 WORKDIR /srv/ledgersmb
-
-# Build dojo
-RUN npm install -g uglify-js@">=2.0 <3.0" \
- && make dojo
-
-# Cleanup args that are for internal use
-ENV DOJO_Build_Deps=
-ENV DOJO_Build_Deps_removal=
-ENV NODE_PATH=
-
-# Configure outgoing mail to use host, other run time variable defaults
 
 ## sSMTP
 ENV SSMTP_ROOT ylavoie@ylavoie.com
@@ -144,12 +133,17 @@ ENV DEFAULT_DB lsmb
 RUN groupmod --gid 1000 www-data
 RUN usermod --uid 1000 --gid 1000 --shell /bin/bash www-data
 
+# Cleanup args that are for internal use
+ENV DOJO_Build_Deps=
+ENV DOJO_Build_Deps_removal=
+ENV NODE_PATH=
+
+# Configure outgoing mail to use host, other run time variable defaults
+
 RUN \
   DEBIAN_FRONTEND=noninteractive apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get -y install \
     libexpat-dev
-
-WORKDIR /srv/ledgersmb
 
 COPY configs/cpanfile /srv/ledgersmb/cpanfile
 COPY patch/cpanm /usr/bin/cpanm
@@ -237,7 +231,7 @@ RUN apt-get update -qqy \
   && rm /var/www/$PHANTOM_JS.tar.bz2
 
 # Chromedriver
-RUN wget --no-verbose https://chromedriver.storage.googleapis.com/2.42/chromedriver_linux64.zip \
+RUN wget --no-verbose https://chromedriver.storage.googleapis.com/83.0.4103.39/chromedriver_linux64.zip \
  && unzip chromedriver_linux64.zip \
  && sudo chmod +x chromedriver \
  && sudo mv chromedriver /usr/bin/ \
@@ -254,7 +248,7 @@ RUN wget --no-verbose https://dl.google.com/linux/direct/google-chrome-stable_cu
  && apt-get -qq -y clean
 
 # GeckoDriver
-ARG GECKODRIVER_VERSION=0.21.0
+ARG GECKODRIVER_VERSION=0.26.0
 RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux64.tar.gz \
   && rm -rf /opt/geckodriver \
   && tar -C /opt -zxf /tmp/geckodriver.tar.gz \
@@ -271,7 +265,7 @@ RUN apt-get update -qqy \
   && rm -rf /opt/firefox
 
 # Releases versions
-ARG FIREFOX_VERSION=57.0
+ARG FIREFOX_VERSION=76.0
 ENV FF_PATH https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2
 # Candidates versions
 #ARG FIREFOX_VERSION=60.0b10
@@ -291,15 +285,15 @@ RUN apt-get update && \
     apt-get update && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -qyy postgresql-client-$POSTGRESQL_VERSION
 
-# Bust the Docker cache based on a flag file,
-# computed from the SHA of the head of git tree (when bind mounted)
-COPY --chown=www-data:www-data ledgersmb.rebuild /var/www/ledgersmb.rebuild
-COPY --chown=www-data:www-data configs/git-colordiff.sh /var/www/git-colordiff.sh
+RUN cpanm --quiet --notest --force \
+          Time::Format Time::HiRes TAP::Filter HTML::FromANSI Long::Jump goto::file \
+          Test2::Plugin::UUID Test2::Plugin::MemUsage Test::Simple App::Yath \
+          Devel::PrettyTrace Test2::Bundle::SpecDeclare B::DeparseTree \
+          Plack::Handler::Starlight Plack::Handler::Thrall \
+          Filesys::Notify::Simple Linux::Inotify2 \
+          Math::Random::Secure Devel::vscode
 
 ENV LANG=C.UTF-8
-
-RUN mkdir -p /usr/share/sql-ledger/users
-COPY sql-ledger/users/members /usr/share/sql-ledger/users/members
 
 # Avahi
 ADD configs/avahi.conf /etc/dbus-1/system.d/avahi.conf
@@ -308,36 +302,27 @@ ADD configs/avahi.conf /etc/dbus-1/system.d/avahi.conf
 RUN mkdir -p /var/run/dbus
 VOLUME /var/run/dbus
 
-COPY start.sh /usr/local/bin/start.sh
-COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
-
-RUN chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
-  chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh
-
-# Add temporary patches
-COPY patch/patches.tar.xz /tmp
-RUN cd / && tar Jxf /tmp/patches.tar.xz && rm /tmp/patches.tar.xz
-RUN cpanm --quiet --notest --force \
-          Time::Format Time::HiRes TAP::Filter HTML::FromANSI Long::Jump goto::file \
-          Test2::Plugin::UUID Test2::Plugin::MemUsage Test::Simple App::Yath \
-          Devel::PrettyTrace Test2::Bundle::SpecDeclare B::DeparseTree
-
 # React/Vue stuff
 #RUN apt-get update && \
 #    apt-get -y install webpack
 #TODO: Find cpanfile equivalent
 ENV NODE_PATH=~/node_modules
-ENV NODE_ENV=development
+
+# Add temporary patches
+COPY patch/patches.tar.xz /tmp
+RUN cd / && tar Jxf /tmp/patches.tar.xz && rm /tmp/patches.tar.xz
 
 #
+# Bust the Docker cache based on a flag file,
+# computed from the SHA of the head of git tree (when bind mounted)
+#COPY --chown=www-data:www-data ledgersmb.rebuild /var/www/ledgersmb.rebuild
+COPY --chown=www-data:www-data configs/git-colordiff.sh /var/www/git-colordiff.sh
+
+RUN mkdir -p /usr/share/sql-ledger/users
+COPY sql-ledger/users/members /usr/share/sql-ledger/users/members
+
 USER www-data
 WORKDIR /var/www
-COPY package.json /var/www/
-COPY webpack.config.js /var/www
-COPY serve.config.js /var/www/
-#RUN npm config set registry="http://registry.npmjs.org/"
-RUN npm install --save-dev webpack webpack-cli
-RUN npm install
 
 #RUN cat /etc/resolv.conf
 #RUN nslookup ylaho3
@@ -356,6 +341,23 @@ RUN cd /var/www && \
   ./mcthemes/mc_change_theme.sh mcthemes/puthre.theme && \
   rm mc*.tar.xz
 
+COPY serve.config.js /var/www/
+COPY package.json /var/www/
+COPY webpack.config.js /var/www
+
+RUN npm --loglevel=error install --dev --save-dev webpack webpack-cli \
+ && NODE_ENV=development \
+    npm install && \
+    npm dedupe
+
+RUN npm ls chokidar core-js request fsevents iltorb
+
 WORKDIR /srv/ledgersmb
+
+COPY start.sh /usr/local/bin/start.sh
+COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
+
+RUN sudo chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
+    sudo chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh
 
 CMD ["start.sh"]

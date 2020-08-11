@@ -1,6 +1,4 @@
 export DISPLAY=ylaho3:0
-export COLUMNS=143
-export LINES=39
 export PATH=$PATH:/usr/lib/chromium-browser
 
 if [[ -f /opt/perlbrew/etc/bashrc ]] ; then
@@ -17,6 +15,7 @@ fi
 
 eval "`dircolors -b`"
 alias ls='ls --color=auto'
+alias less='less -rS'
 #alias webpack='/srv/ledgersmb/UI/node_modules/.bin/webpack --colors --display-error-details'
 
 PATH="~/node_modules/.bin:${PATH}"
@@ -34,3 +33,4 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+export PAGER="most"
