@@ -57,17 +57,23 @@ export PATH=$PATH:/usr/lib/chromium-browser
 export LC_ALL=en_US.UTF-8
 export LC_TIME=en_DK.UTF-8
 
-if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" != "1" ]]; then
+if [[ ! -v DEVELOPMENT || "$DEVELOPMENT" == "" ]]; then
   #SERVER=Starman
   #SERVER=Starlight
   #SERVER=Thrall
   SERVER=HTTP::Server::PSGI
   PSGI=bin/ledgersmb-server.psgi
   OPT="-I lib -I old/lib"
-else
+elif [[ "$DEVELOPMENT" == "1" ]]; then
   SERVER=HTTP::Server::PSGI
   PSGI=utils/devel/ledgersmb-server-development.psgi
   OPT="-I lib -I old/lib --workers 1 --env development"
+else
+  export PERL5OPT=-d:NYTProf
+  export NYTPROF=addpid=1:trace=2:start=no:file=/tmp/nytprof.null.out
+  SERVER=Starman
+  PSGI=utils/devel/ledgersmb-server-development.psgi
+  OPT="-I lib -I old/lib --env development"
 fi
 
 set -x
@@ -81,4 +87,3 @@ npm run build >& tee x.x
 
 #PERL5OPT=-d:vscode PERLDB_OPTS='RemotePort=ylaho3:5002' plackup --port 5001 --server $SERVER $PSGI $OPT \
 #      --Reload lib,old,xt/lib,t,xt,/usr/local/share/perl,/usr/share/perl,/usr/share/perl5
-

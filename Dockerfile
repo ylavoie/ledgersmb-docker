@@ -1,4 +1,4 @@
-FROM        ubuntu:bionic
+FROM        ubuntu:eoan
 MAINTAINER  Freelock john@freelock.com
 
 ARG POSTGRESQL_VERSION=10
@@ -20,9 +20,9 @@ RUN echo "APT::Install-Recommends \"false\";\nAPT::Install-Suggests \"false\";" 
     wget curl ca-certificates gnupg2
 
 # We need our repository for libpgobject*
-RUN apt-get update && \
-    apt-get -y install software-properties-common wget && \
-    add-apt-repository ppa:ledgersmb/main
+#RUN apt-get update && \
+#    apt-get -y install software-properties-common wget && \
+#    add-apt-repository ppa:ledgersmb/main
 
 RUN \
   DEBIAN_FRONTEND="noninteractive" apt-get update && \
@@ -147,8 +147,19 @@ RUN \
 
 COPY configs/cpanfile /srv/ledgersmb/cpanfile
 COPY patch/cpanm /usr/bin/cpanm
+
+RUN mkdir -p /var/www && chown www-data:www-data /var/www
+
+# Add sudo capability
+RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
+
+USER www-data
+
 # master requirements
-RUN cpanm --quiet --notest \
+RUN perl -MCPAN -Mlocal::lib -e 'CPAN::install(LWP)' && \
+    perl -Mlocal::lib
+RUN cpanm --local-lib=~/perl5 local::lib
+RUN cpanm --local-lib=~/perl5 --verbose --notest \
   --with-feature=starman \
   --with-feature=latex-pdf-ps \
   --with-feature=openoffice \
@@ -161,7 +172,7 @@ RUN cpanm --quiet --notest \
   --installdeps .
 
 # Fix Module::Runtime of old distros
-RUN cpanm --force Data::Printer Data::Dumper Smart::Comments \
+RUN cpanm --local-lib=~/perl5 --force Data::Printer Data::Dumper Smart::Comments \
     Devel::hdb \
     Devel::NYTProf \
     Plack::Middleware::Debug::Ajax \
@@ -170,6 +181,7 @@ RUN cpanm --force Data::Printer Data::Dumper Smart::Comments \
     Plack::Middleware::Debug::LazyLoadModules \
     Plack::Middleware::Debug::Log4perl \
     Plack::Middleware::Debug::Profiler::NYTProf \
+    Plack::Middleware::Debug::RefCounts \
     Plack::Middleware::Debug::TraceENV \
     Plack::Middleware::Debug::W3CValidate \
     Plack::Middleware::InteractiveDebugger \
@@ -177,17 +189,28 @@ RUN cpanm --force Data::Printer Data::Dumper Smart::Comments \
 
 # Make sure that Moose doesn't stay around 2.1202 or you'll get
 # `Invalid version format (version required) at ... /5.18.1/Module/Runtime.pm line 386.`
-RUN cpanm Moose
+RUN cpanm --local-lib=~/perl5 Moose
+
+RUN cpanm --local-lib=~/perl5 --verbose --notest \
+  --with-feature=cldr --installdeps .
 
 # Work around an aufs bug related to directory permissions:
-RUN mkdir -p /tmp && \
-  chmod 1777 /tmp && \
-  chown www-data:www-data /tmp
+RUN sudo mkdir -p /tmp && \
+  sudo chmod 1777 /tmp && \
+  sudo chown www-data:www-data /tmp
 
 # Internal Port Expose
 EXPOSE 5001
 
-RUN cpanm --quiet --notest --force \
+RUN cpanm --local-lib=~/perl5 --quiet --notest --force \
+          Time::Format Time::HiRes TAP::Filter HTML::FromANSI Long::Jump goto::file \
+          Test2::Plugin::UUID Test2::Plugin::MemUsage Test::Simple App::Yath \
+          Devel::PrettyTrace Test2::Bundle::SpecDeclare B::DeparseTree \
+          Plack::Handler::Starlight Plack::Handler::Thrall \
+          Filesys::Notify::Simple Linux::Inotify2 \
+          Math::Random::Secure Devel::vscode
+
+RUN cpanm --local-lib=~/perl5 --quiet --notest --force \
     HTTP::Exception Module::Versions \
     MooseX::Constructor::AllErrors TryCatch \
     Text::PO::Parser Class::Std::Utils IO::File Devel::hdb Devel::Trepan \
@@ -195,20 +218,27 @@ RUN cpanm --quiet --notest --force \
     rm -r ~/.cpanm
 
 # Force upgrade to 2.0002 or better
-RUN cpanm --quiet --notest --force PGObject::Simple::Role
+RUN cpanm --local-lib=~/perl5 --quiet --notest --force PGObject PGObject::Simple::Role
 
-RUN mkdir -p /var/www && chown www-data:www-data /var/www
-
-# Add sudo capability
-RUN echo "www-data ALL=NOPASSWD: ALL" >>/etc/sudoers
+USER root
 
 # install necessary stuff; avahi, and ssh such that we can log in and control avahi
+# eoan chromium is using snapd which doesn't run during docker build
+# What a mess...
+RUN apt remove chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg-extra
+#COPY configs/debian-stable.list /etc/apt/sources.list.d/debian-stable.list
+#COPY configs/debian-chromium /etc/apt/preferences.d/debian-chromium
+# chromium-chromedriver ?
+RUN apt-get update -y \
+  && DEBIAN_FRONTEND="noninteractive" \
+     apt-get -qq install -y software-properties-common
+RUN apt-add-repository ppa:system76/pop
 RUN apt-get update -y \
   && DEBIAN_FRONTEND="noninteractive" \
      apt-get -qq install -y avahi-daemon avahi-discover avahi-utils libnss-mdns \
                             iputils-ping dnsutils tclsh expect \
                             tcpdump psmisc phantomjs wget unzip \
-                            chromium-browser chromium-chromedriver \
+                            chromium \
   && apt-get -qq -y autoclean \
   && apt-get -qq -y autoremove \
   && apt-get -qq -y clean
@@ -285,14 +315,6 @@ RUN apt-get update && \
     apt-get update && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -qyy postgresql-client-$POSTGRESQL_VERSION
 
-RUN cpanm --quiet --notest --force \
-          Time::Format Time::HiRes TAP::Filter HTML::FromANSI Long::Jump goto::file \
-          Test2::Plugin::UUID Test2::Plugin::MemUsage Test::Simple App::Yath \
-          Devel::PrettyTrace Test2::Bundle::SpecDeclare B::DeparseTree \
-          Plack::Handler::Starlight Plack::Handler::Thrall \
-          Filesys::Notify::Simple Linux::Inotify2 \
-          Math::Random::Secure Devel::vscode
-
 ENV LANG=C.UTF-8
 
 # Avahi
@@ -359,5 +381,11 @@ COPY update_ssmtp.sh /usr/local/bin/update_ssmtp.sh
 
 RUN sudo chown www-data /etc/ssmtp /etc/ssmtp/ssmtp.conf && \
     sudo chmod +x /usr/local/bin/update_ssmtp.sh /usr/local/bin/start.sh
+
+ENV PATH="/var/www/perl5/bin${PATH:+:${PATH}}" \
+    PERL5LIB="/var/www/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}" \
+    PERL_LOCAL_LIB_ROOT="/var/www/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}" \
+    PERL_MB_OPT="--install_base \"/var/www/perl5\"" \
+    PERL_MM_OPT="INSTALL_BASE=/var/www/perl5"
 
 CMD ["start.sh"]
